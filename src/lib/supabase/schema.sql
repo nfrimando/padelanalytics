@@ -5,7 +5,7 @@ CREATE TABLE public.events (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL,
   timestamp_seconds double precision NOT NULL,
-  point_type text NOT NULL,
+  event_type text NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   player_id integer NOT NULL,
   CONSTRAINT events_pkey PRIMARY KEY (id),

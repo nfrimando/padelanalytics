@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 
 import { useSession } from "@/lib/useSession";
 import PlayerCreate from "@/app/components/PlayerCreate";
+import EventSelector from "@/app/components/EventSelector";
 import YouTube from "react-youtube";
 import { supabase } from "@/lib/supabase/client";
+import { useUpdateEvent } from "@/lib/useUpdateEvent";
+import { useCreateEvent } from "@/lib/useCreateEvent";
+import { useDeleteEvent } from "@/lib/useDeleteEvent";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { usePlayers } from "@/lib/usePlayers";
 
@@ -32,9 +36,12 @@ export default function SessionPage({
   const [events, setEvents] = useState<any[]>([]);
 
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
-  const [selectedPointType, setSelectedPointType] = useState<string | null>(
+  const [selectedEventType, setSelectedEventType] = useState<string | null>(
     null,
   );
+
+  // For EventSelector validity
+  const [isEventValid, setIsEventValid] = useState(false);
 
   // Get session players (ordered by position)
   const { sessionPlayers } = useSessionPlayers(sessionId);
@@ -51,19 +58,19 @@ export default function SessionPage({
         position: sp.position,
       };
     });
-  const pointTypes = ["Winner", "Error", "Smash", "Lob"];
+  const eventTypes = ["winner", "forced_error", "unforced_error"];
 
   // Editing and deleting events
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editPlayer, setEditPlayer] = useState<number | null>(null);
-  const [editPointType, setEditPointType] = useState<string | null>(null);
+  const [editEventType, setEditEventType] = useState<string | null>(null);
+  const [editTargetPlayer, setEditTargetPlayer] = useState<number | null>(null);
 
-  const deleteEvent = async (id: string) => {
-    if (!confirm("Delete this event?")) return;
-
-    const { error } = await supabase.from("events").delete().eq("id", id);
-
-    if (!error) {
+  const { deleteEvent: deleteEventHook, loading: deletingEvent } =
+    useDeleteEvent();
+  const handleDeleteEvent = async (id: string) => {
+    const success = await deleteEventHook(id);
+    if (success) {
       setEvents((prev) => prev.filter((e) => e.id !== id));
     }
   };
@@ -71,23 +78,20 @@ export default function SessionPage({
   const startEdit = (event: any) => {
     setEditingEventId(event.id);
     setEditPlayer(event.player_id);
-    setEditPointType(event.point_type);
+    setEditEventType(event.event_type);
+    setEditTargetPlayer(event.target_player_id ?? null);
   };
 
+  const { updateEvent, loading: isUpdating } = useUpdateEvent();
   const saveEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("events")
-      .update({
-        player_id: editPlayer,
-        point_type: editPointType,
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (!error && data) {
+    const data = await updateEvent({
+      id,
+      player_id: editPlayer!,
+      event_type: editEventType!,
+      target_player_id: editTargetPlayer,
+    });
+    if (data) {
       setEvents((prev) => prev.map((e) => (e.id === id ? data : e)));
-
       setEditingEventId(null);
     }
   };
@@ -126,30 +130,35 @@ export default function SessionPage({
     fetchEvents();
   }, [sessionId]);
 
-  // Log event
+  // Seek video to specific time
+  const seekToEvent = (seconds: number) => {
+    player.seekTo(seconds, true);
+  };
+
+  // Log event using useCreateEvent hook
+  const { createEvent, loading: isLogging } = useCreateEvent();
+
   const logEvent = async () => {
-    if (!player || selectedPlayer === null || !selectedPointType) {
-      alert("Select player and point type");
+    if (isLogging) return;
+
+    if (!player || selectedPlayer === null || !selectedEventType) {
+      alert("Select player and event type");
       return;
     }
 
     const timestamp = player.getCurrentTime();
 
-    const { data, error } = await supabase
-      .from("events")
-      .insert({
-        session_id: sessionId,
-        timestamp_seconds: timestamp,
-        player_id: selectedPlayer,
-        point_type: selectedPointType,
-      })
-      .select()
-      .single();
+    const data = await createEvent({
+      session_id: sessionId,
+      timestamp_seconds: timestamp,
+      player_id: selectedPlayer,
+      event_type: selectedEventType,
+      target_player_id: null, // for future use (e.g. who made the error or who won the point)
+    });
 
-    if (!error && data) {
+    if (data) {
       setEvents((prev) => [...prev, data]);
-
-      setSelectedPointType(null);
+      setSelectedEventType(null);
       // keep player selected (faster workflow)
     }
   };
@@ -226,26 +235,19 @@ export default function SessionPage({
 
         <div className="mt-4">
           <p className="font-semibold mb-2">Point Type</p>
-          <div className="flex flex-wrap gap-2">
-            {pointTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedPointType(type)}
-                className={`px-3 py-1 rounded border font-semibold focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-150 ${
-                  selectedPointType === type
-                    ? "bg-green-700 text-white border-green-700 hover:bg-green-800"
-                    : "bg-white text-black border-gray-400 hover:bg-green-100"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
+          <EventSelector
+            value={selectedEventType}
+            onChange={setSelectedEventType}
+            eventTypes={eventTypes}
+            onValidityChange={setIsEventValid}
+          />
         </div>
 
         <button
           onClick={logEvent}
-          className="mt-6 bg-green-600 text-white px-4 py-2 rounded"
+          className={`mt-6 px-4 py-2 rounded font-semibold transition-colors duration-150
+            ${isEventValid ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
+          disabled={!isEventValid}
         >
           Log Event
         </button>
@@ -254,12 +256,13 @@ export default function SessionPage({
         <div className="mt-6">
           <h2 className="font-bold mb-2">Events</h2>
 
-          <table className="w-full text-sm">
+          <table className="w-full text-sm text-center">
             <thead>
               <tr>
                 <th>Time</th>
-                <th>Player</th>
                 <th>Type</th>
+                <th>Player</th>
+                <th>Target Player</th>
               </tr>
             </thead>
             <tbody>
@@ -268,7 +271,31 @@ export default function SessionPage({
 
                 return (
                   <tr key={e.id} className="border-t">
-                    <td>{formatTime(e.timestamp_seconds)}</td>
+                    <td
+                      onClick={() => seekToEvent(e.timestamp_seconds)}
+                      className="text-blue-700 underline cursor-pointer hover:text-blue-900 transition-colors duration-100 font-semibold"
+                      title="Seek video to this time"
+                    >
+                      {formatTime(e.timestamp_seconds)}
+                    </td>
+
+                    {/* POINT TYPE */}
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editEventType || ""}
+                          onChange={(ev) => setEditEventType(ev.target.value)}
+                        >
+                          {eventTypes.map((et) => (
+                            <option key={et} value={et}>
+                              {et}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        e.event_type
+                      )}
+                    </td>
 
                     {/* PLAYER */}
                     <td>
@@ -292,21 +319,27 @@ export default function SessionPage({
                       )}
                     </td>
 
-                    {/* POINT TYPE */}
+                    {/* TARGET PLAYER */}
                     <td>
                       {isEditing ? (
                         <select
-                          value={editPointType || ""}
-                          onChange={(ev) => setEditPointType(ev.target.value)}
+                          value={editTargetPlayer ?? ""}
+                          onChange={(ev) =>
+                            setEditTargetPlayer(Number(ev.target.value))
+                          }
                         >
-                          {pointTypes.map((pt) => (
-                            <option key={pt} value={pt}>
-                              {pt}
+                          <option value="">—</option>
+                          {orderedSessionPlayers.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
                             </option>
                           ))}
                         </select>
                       ) : (
-                        e.point_type
+                        orderedSessionPlayers.find(
+                          (pl) => pl.id === e.target_player_id,
+                        )?.label ||
+                        (e.target_player_id ?? "—")
                       )}
                     </td>
 
@@ -336,10 +369,11 @@ export default function SessionPage({
                             Edit
                           </button>
                           <button
-                            onClick={() => deleteEvent(e.id)}
+                            onClick={() => handleDeleteEvent(e.id)}
                             className="text-red-600"
+                            disabled={deletingEvent}
                           >
-                            Delete
+                            {deletingEvent ? "Deleting..." : "Delete"}
                           </button>
                         </>
                       )}

@@ -121,10 +121,12 @@ export default function NewSessionPage() {
           onChange={(e) => handleUrlChange(e.target.value)}
         />
         <button
-          disabled={!videoId || loading}
+          disabled={
+            !videoId || loading || selectedPlayers.some((p) => !p)
+          }
           onClick={handleCreateSession}
           className={`px-4 py-2 rounded-r whitespace-nowrap border font-semibold transition-colors duration-150 ${
-            videoId && !loading
+            videoId && !loading && selectedPlayers.every((p) => p)
               ? "bg-black text-white border-black cursor-pointer hover:bg-gray-900"
               : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
           }`}
