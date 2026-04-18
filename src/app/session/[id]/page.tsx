@@ -211,8 +211,10 @@ export default function SessionPage({
               <button
                 key={p.id}
                 onClick={() => setSelectedPlayer(p.id)}
-                className={`px-3 py-1 rounded border ${
-                  selectedPlayer === p.id ? "bg-black text-white" : "bg-white"
+                className={`px-3 py-1 rounded border font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-150 ${
+                  selectedPlayer === p.id
+                    ? "bg-indigo-700 text-white border-indigo-700 hover:bg-indigo-800"
+                    : "bg-white text-black border-gray-400 hover:bg-indigo-100"
                 }`}
                 title={`Position ${p.position}`}
               >
@@ -229,10 +231,10 @@ export default function SessionPage({
               <button
                 key={type}
                 onClick={() => setSelectedPointType(type)}
-                className={`px-3 py-1 rounded border ${
+                className={`px-3 py-1 rounded border font-semibold focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-150 ${
                   selectedPointType === type
-                    ? "bg-black text-white"
-                    : "bg-white"
+                    ? "bg-green-700 text-white border-green-700 hover:bg-green-800"
+                    : "bg-white text-black border-gray-400 hover:bg-green-100"
                 }`}
               >
                 {type}
