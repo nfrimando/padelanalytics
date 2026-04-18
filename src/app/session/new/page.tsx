@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { useCreateSession } from "@/lib/useCreateSession";
 
 function extractVideoId(url: string) {
   const regExp = /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([^#&?]*)/;
@@ -12,40 +11,20 @@ function extractVideoId(url: string) {
 
 export default function NewSessionPage() {
   const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const { createSession, loading, error } = useCreateSession();
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
   const [titleLoading, setTitleLoading] = useState(false);
   const [thumbLoading, setThumbLoading] = useState(false);
 
-  const createSession = async () => {
+  const handleCreateSession = async () => {
     if (loading) return;
-    setLoading(true);
     const videoId = extractVideoId(url);
     if (!videoId) {
       alert("Invalid YouTube URL");
-      setLoading(false);
       return;
     }
-
-    const { data, error } = await supabase
-      .from("sessions")
-      .insert({
-        youtube_url: url,
-        youtube_video_id: videoId,
-        status: "live",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-      setLoading(false);
-      return;
-    }
-
-    router.push(`/session/${data.id}`);
+    await createSession(url, videoId);
   };
 
   const fetchVideoTitle = async (url: string) => {
@@ -88,7 +67,7 @@ export default function NewSessionPage() {
         />
         <button
           disabled={!videoId || loading}
-          onClick={createSession}
+          onClick={handleCreateSession}
           className={`px-4 py-2 rounded-r whitespace-nowrap border font-semibold transition-colors duration-150 ${
             videoId && !loading
               ? "bg-black text-white border-black cursor-pointer hover:bg-gray-900"
