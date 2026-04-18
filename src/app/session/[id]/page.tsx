@@ -1,11 +1,293 @@
-export default function SessionPage({ params }: { params: { id: string } }) {
-  return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold">Session: {params.id}</h1>
+"use client";
 
-      <p className="mt-2 text-gray-600">
-        We will build the live annotation UI here next.
-      </p>
+import { useEffect, useState } from "react";
+import YouTube from "react-youtube";
+import { supabase } from "@/lib/supabase/client";
+
+import React from "react";
+
+// for logs
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+export default function SessionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: sessionId } = React.use(params);
+
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [player, setPlayer] = useState<any>(null);
+  const [events, setEvents] = useState<any[]>([]);
+
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [selectedPointType, setSelectedPointType] = useState<string | null>(
+    null,
+  );
+
+  const players = ["A", "B", "C", "D"];
+  const pointTypes = ["Winner", "Error", "Smash", "Lob"];
+
+  // Editing and deleting events
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editPlayer, setEditPlayer] = useState<string | null>(null);
+  const [editPointType, setEditPointType] = useState<string | null>(null);
+
+  const deleteEvent = async (id: string) => {
+    if (!confirm("Delete this event?")) return;
+
+    const { error } = await supabase.from("events").delete().eq("id", id);
+
+    if (!error) {
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    }
+  };
+
+  const startEdit = (event: any) => {
+    setEditingEventId(event.id);
+    setEditPlayer(event.player_tag);
+    setEditPointType(event.point_type);
+  };
+
+  const saveEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("events")
+      .update({
+        player_tag: editPlayer,
+        point_type: editPointType,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setEvents((prev) => prev.map((e) => (e.id === id ? data : e)));
+
+      setEditingEventId(null);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingEventId(null);
+  };
+
+  // Load session
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("id", sessionId)
+        .single();
+
+      if (data) {
+        setVideoId(data.youtube_video_id);
+      }
+    };
+
+    fetchSession();
+  }, [sessionId]);
+
+  // Load events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("timestamp_seconds", { ascending: true });
+
+      if (data) setEvents(data);
+    };
+
+    fetchEvents();
+  }, [sessionId]);
+
+  // Log event
+  const logEvent = async () => {
+    if (!player || !selectedPlayer || !selectedPointType) {
+      alert("Select player and point type");
+      return;
+    }
+
+    const timestamp = player.getCurrentTime();
+
+    const { data, error } = await supabase
+      .from("events")
+      .insert({
+        session_id: sessionId,
+        timestamp_seconds: timestamp,
+        player_tag: selectedPlayer,
+        point_type: selectedPointType,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setEvents((prev) => [...prev, data]);
+
+      setSelectedPointType(null);
+      // keep player selected (faster workflow)
+    }
+  };
+
+  return (
+    <div className="p-6 grid grid-cols-2 gap-6">
+      {/* LEFT: VIDEO */}
+      <div>
+        {videoId && (
+          <YouTube videoId={videoId} onReady={(e) => setPlayer(e.target)} />
+        )}
+      </div>
+
+      {/* RIGHT: CONTROLS */}
+      <div>
+        <h2 className="font-bold mb-4">Log Event</h2>
+
+        <div>
+          <p className="font-semibold mb-2">Player</p>
+          <div className="flex gap-2">
+            {players.map((p) => (
+              <button
+                key={p}
+                onClick={() => setSelectedPlayer(p)}
+                className={`px-3 py-1 rounded border ${
+                  selectedPlayer === p ? "bg-black text-white" : "bg-white"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <p className="font-semibold mb-2">Point Type</p>
+          <div className="flex flex-wrap gap-2">
+            {pointTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedPointType(type)}
+                className={`px-3 py-1 rounded border ${
+                  selectedPointType === type
+                    ? "bg-black text-white"
+                    : "bg-white"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={logEvent}
+          className="mt-6 bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Log Event
+        </button>
+
+        {/* EVENTS TABLE */}
+        <div className="mt-6">
+          <h2 className="font-bold mb-2">Events</h2>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Player</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((e) => {
+                const isEditing = editingEventId === e.id;
+
+                return (
+                  <tr key={e.id} className="border-t">
+                    <td>{formatTime(e.timestamp_seconds)}</td>
+
+                    {/* PLAYER */}
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editPlayer || ""}
+                          onChange={(ev) => setEditPlayer(ev.target.value)}
+                        >
+                          {players.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        e.player_tag
+                      )}
+                    </td>
+
+                    {/* POINT TYPE */}
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editPointType || ""}
+                          onChange={(ev) => setEditPointType(ev.target.value)}
+                        >
+                          {pointTypes.map((pt) => (
+                            <option key={pt} value={pt}>
+                              {pt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        e.point_type
+                      )}
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td className="space-x-2">
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={() => saveEdit(e.id)}
+                            className="text-green-600"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="text-gray-500"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => startEdit(e)}
+                            className="text-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteEvent(e.id)}
+                            className="text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
