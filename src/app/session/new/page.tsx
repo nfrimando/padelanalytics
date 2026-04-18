@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useCreateSession } from "@/lib/useCreateSession";
 import { usePlayers } from "@/lib/usePlayers";
-import { useCreateSessionPlayer } from "@/lib/useCreateSessionPlayer";
+import { useRouter } from "next/navigation";
 
 function extractVideoId(url: string) {
   const regExp = /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([^#&?]*)/;
@@ -13,8 +12,9 @@ function extractVideoId(url: string) {
 
 export default function NewSessionPage() {
   const [url, setUrl] = useState("");
-  const { createSession, loading, error } = useCreateSession();
-  const { createSessionPlayer } = useCreateSessionPlayer();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const [videoId, setVideoId] = useState<string | null>(null);
 
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
@@ -45,35 +45,33 @@ export default function NewSessionPage() {
       alert("Invalid YouTube URL");
       return;
     }
-    // Create the session first
-    const session = await createSession(url, videoId);
-    if (!session || !session.id) {
-      console.log("Session creation failed", session);
+    if (selectedPlayers.some((p) => !p)) {
+      alert("Please select all 4 players.");
       return;
     }
-    console.log("Session created successfully", session);
-
-    // Create 4 session_players records (positions: 1,2 for team 1; 3,4 for team 2)
-    const playerPositions = [1, 2, 3, 4];
-    for (let i = 0; i < 4; i++) {
-      const player_id = selectedPlayers[i];
-      if (player_id) {
-        const result = await createSessionPlayer({
-          session_id: session.id,
-          player_id,
-          position: playerPositions[i],
-        });
-        if (result) {
-          console.log(
-            `session_players creation successful for player_id ${player_id}, position ${playerPositions[i]}`,
-            result,
-          );
-        } else {
-          console.log(
-            `session_players creation FAILED for player_id ${player_id}, position ${playerPositions[i]}`,
-          );
-        }
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await (
+        await import("@/lib/supabase/client")
+      ).supabase.rpc("create_session_with_players", {
+        youtube_url: url,
+        youtube_video_id: videoId,
+        title: videoTitle || null,
+        player_ids: selectedPlayers,
+      });
+      setLoading(false);
+      if (error || !data) {
+        setError(error?.message || "Session creation failed");
+        console.log("Session creation failed", error);
+        return;
       }
+      console.log("Session and players created successfully", data);
+      router.push(`/session/${data}`);
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || "Unknown error");
+      console.log("Session creation failed", err);
     }
   };
 

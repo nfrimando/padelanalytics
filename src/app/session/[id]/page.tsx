@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useSession } from "@/lib/useSession";
 import PlayerCreate from "@/app/components/PlayerCreate";
 import YouTube from "react-youtube";
 import { supabase } from "@/lib/supabase/client";
+import { useSessionPlayers } from "@/lib/useSessionPlayers";
+import { usePlayers } from "@/lib/usePlayers";
 
 import React from "react";
 import { notFound } from "next/navigation";
@@ -33,12 +36,21 @@ export default function SessionPage({
     null,
   );
 
-  const players = [
-    { id: 1, label: "A" },
-    { id: 2, label: "B" },
-    { id: 3, label: "C" },
-    { id: 4, label: "D" },
-  ];
+  // Get session players (ordered by position)
+  const { sessionPlayers } = useSessionPlayers(sessionId);
+  const { players: allPlayers } = usePlayers();
+  // Map sessionPlayers to include player info
+  const orderedSessionPlayers = [...sessionPlayers]
+    .sort((a, b) => a.position - b.position)
+    .map((sp) => {
+      const player = allPlayers.find((p) => p.player_id === sp.player_id);
+      return {
+        id: sp.player_id,
+        label:
+          player?.nickname || player?.player_name || `Player ${sp.player_id}`,
+        position: sp.position,
+      };
+    });
   const pointTypes = ["Winner", "Error", "Smash", "Lob"];
 
   // Editing and deleting events
@@ -195,13 +207,14 @@ export default function SessionPage({
         <div>
           <p className="font-semibold mb-2">Player</p>
           <div className="flex gap-2">
-            {players.map((p) => (
+            {orderedSessionPlayers.map((p) => (
               <button
                 key={p.id}
                 onClick={() => setSelectedPlayer(p.id)}
                 className={`px-3 py-1 rounded border ${
                   selectedPlayer === p.id ? "bg-black text-white" : "bg-white"
                 }`}
+                title={`Position ${p.position}`}
               >
                 {p.label}
               </button>
@@ -264,15 +277,16 @@ export default function SessionPage({
                             setEditPlayer(Number(ev.target.value))
                           }
                         >
-                          {players.map((p) => (
+                          {orderedSessionPlayers.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.label}
                             </option>
                           ))}
                         </select>
                       ) : (
-                        players.find((pl) => pl.id === e.player_id)?.label ||
-                        e.player_id
+                        orderedSessionPlayers.find(
+                          (pl) => pl.id === e.player_id,
+                        )?.label || e.player_id
                       )}
                     </td>
 
