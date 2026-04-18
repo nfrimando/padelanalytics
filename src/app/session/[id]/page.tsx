@@ -24,17 +24,22 @@ export default function SessionPage({
   const [player, setPlayer] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
 
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [selectedPointType, setSelectedPointType] = useState<string | null>(
     null,
   );
 
-  const players = ["A", "B", "C", "D"];
+  const players = [
+    { id: 1, label: "A" },
+    { id: 2, label: "B" },
+    { id: 3, label: "C" },
+    { id: 4, label: "D" },
+  ];
   const pointTypes = ["Winner", "Error", "Smash", "Lob"];
 
   // Editing and deleting events
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [editPlayer, setEditPlayer] = useState<string | null>(null);
+  const [editPlayer, setEditPlayer] = useState<number | null>(null);
   const [editPointType, setEditPointType] = useState<string | null>(null);
 
   const deleteEvent = async (id: string) => {
@@ -49,7 +54,7 @@ export default function SessionPage({
 
   const startEdit = (event: any) => {
     setEditingEventId(event.id);
-    setEditPlayer(event.player_tag);
+    setEditPlayer(event.player_id);
     setEditPointType(event.point_type);
   };
 
@@ -57,7 +62,7 @@ export default function SessionPage({
     const { data, error } = await supabase
       .from("events")
       .update({
-        player_tag: editPlayer,
+        player_id: editPlayer,
         point_type: editPointType,
       })
       .eq("id", id)
@@ -109,7 +114,7 @@ export default function SessionPage({
 
   // Log event
   const logEvent = async () => {
-    if (!player || !selectedPlayer || !selectedPointType) {
+    if (!player || selectedPlayer === null || !selectedPointType) {
       alert("Select player and point type");
       return;
     }
@@ -121,7 +126,7 @@ export default function SessionPage({
       .insert({
         session_id: sessionId,
         timestamp_seconds: timestamp,
-        player_tag: selectedPlayer,
+        player_id: selectedPlayer,
         point_type: selectedPointType,
       })
       .select()
@@ -153,13 +158,13 @@ export default function SessionPage({
           <div className="flex gap-2">
             {players.map((p) => (
               <button
-                key={p}
-                onClick={() => setSelectedPlayer(p)}
+                key={p.id}
+                onClick={() => setSelectedPlayer(p.id)}
                 className={`px-3 py-1 rounded border ${
-                  selectedPlayer === p ? "bg-black text-white" : "bg-white"
+                  selectedPlayer === p.id ? "bg-black text-white" : "bg-white"
                 }`}
               >
-                {p}
+                {p.label}
               </button>
             ))}
           </div>
@@ -215,17 +220,20 @@ export default function SessionPage({
                     <td>
                       {isEditing ? (
                         <select
-                          value={editPlayer || ""}
-                          onChange={(ev) => setEditPlayer(ev.target.value)}
+                          value={editPlayer ?? ""}
+                          onChange={(ev) =>
+                            setEditPlayer(Number(ev.target.value))
+                          }
                         >
                           {players.map((p) => (
-                            <option key={p} value={p}>
-                              {p}
+                            <option key={p.id} value={p.id}>
+                              {p.label}
                             </option>
                           ))}
                         </select>
                       ) : (
-                        e.player_tag
+                        players.find((pl) => pl.id === e.player_id)?.label ||
+                        e.player_id
                       )}
                     </td>
 
