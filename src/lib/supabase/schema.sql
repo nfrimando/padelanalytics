@@ -9,15 +9,27 @@ CREATE TABLE public.events (
   created_at timestamp with time zone DEFAULT now(),
   player_id integer NOT NULL,
   CONSTRAINT events_pkey PRIMARY KEY (id),
-  CONSTRAINT events_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id)
+  CONSTRAINT events_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id),
+  CONSTRAINT events_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(player_id)
 );
 CREATE TABLE public.players (
   player_id integer NOT NULL DEFAULT nextval('players_player_id_seq'::regclass),
   player_name text NOT NULL,
-  email text NOT NULL UNIQUE,
+  email text UNIQUE,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  nickname text,
   CONSTRAINT players_pkey PRIMARY KEY (player_id)
+);
+CREATE TABLE public.session_players (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL,
+  player_id integer NOT NULL,
+  position integer NOT NULL CHECK ("position" >= 1 AND "position" <= 4),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT session_players_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_session FOREIGN KEY (session_id) REFERENCES public.sessions(id),
+  CONSTRAINT fk_player FOREIGN KEY (player_id) REFERENCES public.players(player_id)
 );
 CREATE TABLE public.sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
