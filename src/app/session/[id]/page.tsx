@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "@/lib/useSession";
 import PlayerCreate from "@/app/components/PlayerCreate";
 import YouTube from "react-youtube";
 import { supabase } from "@/lib/supabase/client";
 
 import React from "react";
+import { notFound } from "next/navigation";
 
 // for logs
 function formatTime(seconds: number) {
@@ -82,22 +84,20 @@ export default function SessionPage({
     setEditingEventId(null);
   };
 
-  // Load session
+  // Load session using reusable hook
+  const {
+    session,
+    loading: sessionLoading,
+    error: sessionError,
+  } = useSession(sessionId);
   useEffect(() => {
-    const fetchSession = async () => {
-      const { data } = await supabase
-        .from("sessions")
-        .select("*")
-        .eq("id", sessionId)
-        .single();
-
-      if (data) {
-        setVideoId(data.youtube_video_id);
-      }
-    };
-
-    fetchSession();
-  }, [sessionId]);
+    if (sessionError) {
+      notFound();
+    }
+    if (session && session.youtube_video_id) {
+      setVideoId(session.youtube_video_id);
+    }
+  }, [session, sessionError]);
 
   // Load events
   useEffect(() => {
