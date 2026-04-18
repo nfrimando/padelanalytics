@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useCreateSession } from "@/lib/useCreateSession";
+import { usePlayers } from "@/lib/usePlayers";
+import { useCreateSessionPlayer } from "@/lib/useCreateSessionPlayer";
 
 function extractVideoId(url: string) {
   const regExp = /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([^#&?]*)/;
@@ -12,10 +14,29 @@ function extractVideoId(url: string) {
 export default function NewSessionPage() {
   const [url, setUrl] = useState("");
   const { createSession, loading, error } = useCreateSession();
+  const { createSessionPlayer } = useCreateSessionPlayer();
   const [videoId, setVideoId] = useState<string | null>(null);
+
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
   const [titleLoading, setTitleLoading] = useState(false);
   const [thumbLoading, setThumbLoading] = useState(false);
+
+  // Player selection state
+  const [selectedPlayers, setSelectedPlayers] = useState<(number | null)[]>([
+    null,
+    null,
+    null,
+    null,
+  ]);
+  const { players, loading: playersLoading } = usePlayers();
+  // Handler for player select
+  const handlePlayerSelect = (index: number, playerId: number) => {
+    setSelectedPlayers((prev) => {
+      const updated = [...prev];
+      updated[index] = playerId;
+      return updated;
+    });
+  };
 
   const handleCreateSession = async () => {
     if (loading) return;
@@ -24,7 +45,36 @@ export default function NewSessionPage() {
       alert("Invalid YouTube URL");
       return;
     }
-    await createSession(url, videoId);
+    // Create the session first
+    const session = await createSession(url, videoId);
+    if (!session || !session.id) {
+      console.log("Session creation failed", session);
+      return;
+    }
+    console.log("Session created successfully", session);
+
+    // Create 4 session_players records (positions: 1,2 for team 1; 3,4 for team 2)
+    const playerPositions = [1, 2, 3, 4];
+    for (let i = 0; i < 4; i++) {
+      const player_id = selectedPlayers[i];
+      if (player_id) {
+        const result = await createSessionPlayer({
+          session_id: session.id,
+          player_id,
+          position: playerPositions[i],
+        });
+        if (result) {
+          console.log(
+            `session_players creation successful for player_id ${player_id}, position ${playerPositions[i]}`,
+            result,
+          );
+        } else {
+          console.log(
+            `session_players creation FAILED for player_id ${player_id}, position ${playerPositions[i]}`,
+          );
+        }
+      }
+    }
   };
 
   const fetchVideoTitle = async (url: string) => {
@@ -54,6 +104,13 @@ export default function NewSessionPage() {
     }
   };
 
+  // Sort players alphabetically by nickname (fallback to player_name)
+  const sortedPlayers = [...players].sort((a, b) => {
+    const nameA = (a.nickname || a.player_name || "").toLowerCase();
+    const nameB = (b.nickname || b.player_name || "").toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
   return (
     <div className="p-6 max-w-xl mx-auto" style={{ minWidth: "40vw" }}>
       <h1 className="text-2xl font-bold mb-4">Start Session</h1>
@@ -76,6 +133,109 @@ export default function NewSessionPage() {
         >
           {loading ? "Creating..." : "Create Session"}
         </button>
+      </div>
+
+      {/* 4 Player Select Buttons with Team Labels */}
+      <div className="mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-1">
+          <div className="text-center font-semibold">Team 1</div>
+          <div className="text-center font-semibold">Team 2</div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Team 1: left column, Team 2: right column */}
+          <select
+            id="team_1_player_1"
+            tabIndex={1}
+            className={`border p-2 rounded w-full transition-colors duration-150 ${
+              !videoId || playersLoading
+                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
+            }`}
+            disabled={!videoId || playersLoading}
+            value={selectedPlayers[0] ?? ""}
+            onChange={(e) => handlePlayerSelect(0, Number(e.target.value))}
+          >
+            <option value="" disabled>
+              {playersLoading ? "Loading..." : "Select Player 1"}
+            </option>
+            {sortedPlayers.map((player: any) => (
+              <option key={player.player_id} value={player.player_id}>
+                {player.nickname ||
+                  player.player_name ||
+                  `Player ${player.player_id}`}
+              </option>
+            ))}
+          </select>
+          <select
+            id="team_2_player_1"
+            tabIndex={3}
+            className={`border p-2 rounded w-full transition-colors duration-150 ${
+              !videoId || playersLoading
+                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
+            }`}
+            disabled={!videoId || playersLoading}
+            value={selectedPlayers[2] ?? ""}
+            onChange={(e) => handlePlayerSelect(2, Number(e.target.value))}
+          >
+            <option value="" disabled>
+              {playersLoading ? "Loading..." : "Select Player 3"}
+            </option>
+            {sortedPlayers.map((player: any) => (
+              <option key={player.player_id} value={player.player_id}>
+                {player.nickname ||
+                  player.player_name ||
+                  `Player ${player.player_id}`}
+              </option>
+            ))}
+          </select>
+          <select
+            id="team_1_player_2"
+            tabIndex={2}
+            className={`border p-2 rounded w-full transition-colors duration-150 ${
+              !videoId || playersLoading
+                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
+            }`}
+            disabled={!videoId || playersLoading}
+            value={selectedPlayers[1] ?? ""}
+            onChange={(e) => handlePlayerSelect(1, Number(e.target.value))}
+          >
+            <option value="" disabled>
+              {playersLoading ? "Loading..." : "Select Player 2"}
+            </option>
+            {sortedPlayers.map((player: any) => (
+              <option key={player.player_id} value={player.player_id}>
+                {player.nickname ||
+                  player.player_name ||
+                  `Player ${player.player_id}`}
+              </option>
+            ))}
+          </select>
+          <select
+            id="team_2_player_2"
+            tabIndex={4}
+            className={`border p-2 rounded w-full transition-colors duration-150 ${
+              !videoId || playersLoading
+                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
+            }`}
+            disabled={!videoId || playersLoading}
+            value={selectedPlayers[3] ?? ""}
+            onChange={(e) => handlePlayerSelect(3, Number(e.target.value))}
+          >
+            <option value="" disabled>
+              {playersLoading ? "Loading..." : "Select Player 4"}
+            </option>
+            {sortedPlayers.map((player: any) => (
+              <option key={player.player_id} value={player.player_id}>
+                {player.nickname ||
+                  player.player_name ||
+                  `Player ${player.player_id}`}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {titleLoading ? (
