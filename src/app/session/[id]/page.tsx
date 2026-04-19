@@ -6,6 +6,7 @@ import { useSession } from "@/lib/useSession";
 import YouTube from "react-youtube";
 import { supabase } from "@/lib/supabase/client";
 import { useCreateEvent } from "@/lib/useCreateEvent";
+import { useUpdateEvent } from "@/lib/useUpdateEvent";
 import { useDeleteEvent } from "@/lib/useDeleteEvent";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { usePlayers } from "@/lib/usePlayers";
@@ -86,6 +87,35 @@ export default function SessionPage({
   const [player, setPlayer] = useState<any>(null);
   const [videoLoading, setVideoLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<any>({});
+  const { updateEvent, loading: updatingEvent } = useUpdateEvent();
+
+  const startEdit = (event: any) => {
+    setEditingEventId(event.id);
+    setEditFields({
+      player_id: event.player_id,
+      event_type: event.event_type,
+      target_player_id: event.target_player_id,
+      set_number: event.set_number,
+      game_number: event.game_number,
+      timestamp_seconds: event.timestamp_seconds,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingEventId(null);
+    setEditFields({});
+  };
+
+  const saveEdit = async (id: string) => {
+    const updated = await updateEvent({ id, ...editFields });
+    if (updated) {
+      setEvents((prev) => prev.map((e) => (e.id === id ? updated : e)));
+      setEditingEventId(null);
+      setEditFields({});
+    }
+  };
 
   // Set and Game selectors
   const [selectedSet, setSelectedSet] = useState<number>(1);
@@ -160,8 +190,68 @@ export default function SessionPage({
 
   // Seek video to specific time
   const seekToEvent = (seconds: number) => {
-    player.seekTo(seconds, true);
+    player.seekTo(seconds - 10, true);
   };
+
+  // Spacebar play/pause toggle
+  useEffect(() => {
+    const handleSpacebar = (e: KeyboardEvent) => {
+      if (e.code === "Space" && player) {
+        // Avoid triggering when typing in an input or textarea
+        if (
+          (e.target as HTMLElement)?.tagName === "INPUT" ||
+          (e.target as HTMLElement)?.tagName === "TEXTAREA"
+        )
+          return;
+        e.preventDefault();
+        const state = player.getPlayerState?.();
+        if (state === 1) {
+          player.pauseVideo();
+        } else {
+          player.playVideo();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleSpacebar);
+    return () => window.removeEventListener("keydown", handleSpacebar);
+  }, [player]);
+
+  // Spacebar play/pause toggle and J/L seek
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (!player) return;
+      // Avoid triggering when typing in an input or textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      // Spacebar or K: play/pause
+      if (e.code === "Space" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        const state = player.getPlayerState?.();
+        if (state === 1) {
+          player.pauseVideo();
+        } else {
+          player.playVideo();
+        }
+      }
+
+      // J: rewind 10s
+      if (e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        const current = player.getCurrentTime?.() ?? 0;
+        player.seekTo(Math.max(current - 10, 0), true);
+      }
+
+      // L: forward 10s
+      if (e.key === "l" || e.key === "L") {
+        e.preventDefault();
+        const current = player.getCurrentTime?.() ?? 0;
+        player.seekTo(current + 10, true);
+      }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [player]);
 
   // Reset involvedPlayer when point type or selected player changes
   useEffect(() => {
@@ -292,7 +382,7 @@ export default function SessionPage({
             }}
             opts={{
               width: "100%",
-              height: "360",
+              height: "432",
             }}
           />
         )}
@@ -396,7 +486,8 @@ export default function SessionPage({
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => {
+              {[...events].reverse().map((e) => {
+                const isEditing = editingEventId === e.id;
                 return (
                   <tr key={e.id} className="border-t">
                     <td
@@ -404,29 +495,176 @@ export default function SessionPage({
                       className="text-blue-700 underline cursor-pointer hover:text-blue-900 transition-colors duration-100 font-semibold"
                       title="Seek video to this time"
                     >
-                      {formatTime(e.timestamp_seconds)}
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          className="w-16 border rounded px-1"
+                          value={editFields.timestamp_seconds}
+                          onChange={(ev) =>
+                            setEditFields((f: any) => ({
+                              ...f,
+                              timestamp_seconds: Number(ev.target.value),
+                            }))
+                          }
+                        />
+                      ) : (
+                        formatTime(e.timestamp_seconds)
+                      )}
                     </td>
-                    <td>{e.set_number ?? "—"}</td>
-                    <td>{e.game_number ?? "—"}</td>
-                    <td>{e.event_type}</td>
                     <td>
-                      {orderedSessionPlayers.find((pl) => pl.id === e.player_id)
-                        ?.label || e.player_id}
+                      {isEditing ? (
+                        <select
+                          value={editFields.set_number}
+                          onChange={(ev) =>
+                            setEditFields((f: any) => ({
+                              ...f,
+                              set_number: Number(ev.target.value),
+                            }))
+                          }
+                          className="border rounded px-1"
+                        >
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <option key={num} value={num}>
+                              {num}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        (e.set_number ?? "—")
+                      )}
                     </td>
                     <td>
-                      {orderedSessionPlayers.find(
-                        (pl) => pl.id === e.target_player_id,
-                      )?.label ||
-                        (e.target_player_id ?? "—")}
+                      {isEditing ? (
+                        <select
+                          value={editFields.game_number}
+                          onChange={(ev) =>
+                            setEditFields((f: any) => ({
+                              ...f,
+                              game_number: Number(ev.target.value),
+                            }))
+                          }
+                          className="border rounded px-1"
+                        >
+                          {Array.from({ length: 13 }, (_, i) => i + 1).map(
+                            (num) => (
+                              <option key={num} value={num}>
+                                {num}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      ) : (
+                        (e.game_number ?? "—")
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editFields.event_type}
+                          onChange={(ev) =>
+                            setEditFields((f: any) => ({
+                              ...f,
+                              event_type: ev.target.value,
+                            }))
+                          }
+                          className="border rounded px-1"
+                        >
+                          {EVENT_NAMES.map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        e.event_type
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editFields.player_id}
+                          onChange={(ev) =>
+                            setEditFields((f: any) => ({
+                              ...f,
+                              player_id: Number(ev.target.value),
+                            }))
+                          }
+                          className="border rounded px-1"
+                        >
+                          {orderedSessionPlayers.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        orderedSessionPlayers.find(
+                          (pl) => pl.id === e.player_id,
+                        )?.label || e.player_id
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editFields.target_player_id ?? ""}
+                          onChange={(ev) =>
+                            setEditFields((f: any) => ({
+                              ...f,
+                              target_player_id: ev.target.value
+                                ? Number(ev.target.value)
+                                : null,
+                            }))
+                          }
+                          className="border rounded px-1"
+                        >
+                          <option value="">—</option>
+                          {orderedSessionPlayers.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        orderedSessionPlayers.find(
+                          (pl) => pl.id === e.target_player_id,
+                        )?.label ||
+                        (e.target_player_id ?? "—")
+                      )}
                     </td>
                     <td className="space-x-2">
-                      <button
-                        onClick={() => handleDeleteEvent(e.id)}
-                        className="text-red-600"
-                        disabled={deletingEvent}
-                      >
-                        {deletingEvent ? "Deleting..." : "Delete"}
-                      </button>
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={() => saveEdit(e.id)}
+                            className="text-green-600"
+                            disabled={updatingEvent}
+                          >
+                            {updatingEvent ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="text-gray-600"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => startEdit(e)}
+                            className="text-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEvent(e.id)}
+                            className="text-red-600"
+                            disabled={deletingEvent}
+                          >
+                            {deletingEvent ? "Deleting..." : "Delete"}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
