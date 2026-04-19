@@ -495,20 +495,20 @@ export default function SessionPage({
             Log Now
           </button>
           <button
-            onClick={() => logEvent(8)}
+            onClick={() => logEvent(10)}
             className={`px-4 py-2 rounded font-semibold transition-colors duration-150
               ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
             disabled={!isLogEventEnabled}
           >
-            Log 8s ago
+            Log 10s ago
           </button>
           <button
-            onClick={() => logEvent(12)}
+            onClick={() => logEvent(15)}
             className={`px-4 py-2 rounded font-semibold transition-colors duration-150
               ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
             disabled={!isLogEventEnabled}
           >
-            Log 12s ago
+            Log 15s ago
           </button>
         </div>
 
