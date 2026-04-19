@@ -1,26 +1,60 @@
-import { supabase } from "@/lib/supabase/client";
-import { notFound } from "next/navigation";
+"use client";
 
-export default async function AnalysisPage({
+import { supabase } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
+import { notFound } from "next/navigation";
+import React from "react";
+
+const UUID_V4_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type Status = "loading" | "found" | "not_found";
+
+export default function AnalysisPage({
   params,
 }: {
   params: Promise<{ session_id: string }>;
 }) {
-  const { session_id } = await params;
-  // Check if session exists
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select("id")
-    .eq("id", session_id)
-    .single();
+  const { session_id } = React.use(params);
+  const [status, setStatus] = useState<Status>("loading");
 
-  if (!session || error) {
-    notFound();
+  const isValidUuid = UUID_V4_REGEX.test(session_id ?? "");
+
+  useEffect(() => {
+    if (!isValidUuid) {
+      setStatus("not_found");
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchSession = async () => {
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("id")
+        .eq("id", session_id)
+        .single();
+
+      if (cancelled) return;
+      setStatus(error || !data ? "not_found" : "found");
+    };
+
+    fetchSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [session_id, isValidUuid]);
+
+  // Trigger Next.js 404 during render — works correctly in client components
+  if (status === "not_found") notFound();
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        {/* your spinner */}
+      </div>
+    );
   }
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Hello World</h1>
-    </div>
-  );
+  return <div className="p-6 max-w-5xl mx-auto">Hello World!</div>;
 }
