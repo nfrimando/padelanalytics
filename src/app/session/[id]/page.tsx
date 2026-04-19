@@ -190,7 +190,7 @@ export default function SessionPage({
 
   // Seek video to specific time
   const seekToEvent = (seconds: number) => {
-    player.seekTo(seconds - 12, true);
+    player.seekTo(seconds, true);
   };
 
   // Spacebar play/pause toggle
@@ -315,7 +315,7 @@ export default function SessionPage({
   // Log event using useCreateEvent hook
   const { createEvent, loading: isLogging } = useCreateEvent();
 
-  const logEvent = async () => {
+  const logEvent = async (decrementSeconds: number = 0) => {
     if (isLogging) return;
 
     if (!player || selectedPlayer === null || !selectedPointType) {
@@ -323,7 +323,10 @@ export default function SessionPage({
       return;
     }
 
-    const timestamp = player.getCurrentTime();
+    let timestamp = player.getCurrentTime();
+    if (decrementSeconds > 0) {
+      timestamp = Math.max(0, timestamp - decrementSeconds);
+    }
 
     const data = await createEvent({
       session_id: sessionId,
@@ -476,14 +479,32 @@ export default function SessionPage({
           />
         </div>
 
-        <button
-          onClick={logEvent}
-          className={`mt-6 px-4 py-2 rounded font-semibold transition-colors duration-150
-            ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
-          disabled={!isLogEventEnabled}
-        >
-          Log Event
-        </button>
+        <div className="flex gap-4 mt-6">
+          <button
+            onClick={() => logEvent()}
+            className={`px-4 py-2 rounded font-semibold transition-colors duration-150
+              ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
+            disabled={!isLogEventEnabled}
+          >
+            Log Now
+          </button>
+          <button
+            onClick={() => logEvent(8)}
+            className={`px-4 py-2 rounded font-semibold transition-colors duration-150
+              ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
+            disabled={!isLogEventEnabled}
+          >
+            Log 8s ago
+          </button>
+          <button
+            onClick={() => logEvent(12)}
+            className={`px-4 py-2 rounded font-semibold transition-colors duration-150
+              ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
+            disabled={!isLogEventEnabled}
+          >
+            Log 12s ago
+          </button>
+        </div>
 
         {/* Points Table */}
         <div className="mt-6">
