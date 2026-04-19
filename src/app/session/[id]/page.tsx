@@ -3,11 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { useSession } from "@/lib/useSession";
-import PlayerCreate from "@/app/components/PlayerCreate";
-import EventSelector from "@/app/components/EventSelector";
 import YouTube from "react-youtube";
 import { supabase } from "@/lib/supabase/client";
-import { useUpdateEvent } from "@/lib/useUpdateEvent";
 import { useCreateEvent } from "@/lib/useCreateEvent";
 import { useDeleteEvent } from "@/lib/useDeleteEvent";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
@@ -35,13 +32,16 @@ export default function SessionPage({
   const [videoLoading, setVideoLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
 
+  // Selected Player
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
-  const [selectedEventType, setSelectedEventType] = useState<string | null>(
+
+  // Selected Point Type
+  const [selectedPointType, setSelectedPointType] = useState<string | null>(
     null,
   );
 
-  // For EventSelector validity
-  const [isEventValid, setIsEventValid] = useState(false);
+  // For PointTypeSelector validity
+  const [isPointTypeValid, setIsPointTypeValid] = useState(false);
 
   // Get session players (ordered by position)
   const { sessionPlayers } = useSessionPlayers(sessionId);
@@ -58,14 +58,8 @@ export default function SessionPage({
         position: sp.position,
       };
     });
-  const eventTypes = ["winner", "forced_error", "unforced_error"];
 
-  // Editing and deleting events
-  const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [editPlayer, setEditPlayer] = useState<number | null>(null);
-  const [editEventType, setEditEventType] = useState<string | null>(null);
-  const [editTargetPlayer, setEditTargetPlayer] = useState<number | null>(null);
-
+  // Only deleting events
   const { deleteEvent: deleteEventHook, loading: deletingEvent } =
     useDeleteEvent();
   const handleDeleteEvent = async (id: string) => {
@@ -73,31 +67,6 @@ export default function SessionPage({
     if (success) {
       setEvents((prev) => prev.filter((e) => e.id !== id));
     }
-  };
-
-  const startEdit = (event: any) => {
-    setEditingEventId(event.id);
-    setEditPlayer(event.player_id);
-    setEditEventType(event.event_type);
-    setEditTargetPlayer(event.target_player_id ?? null);
-  };
-
-  const { updateEvent, loading: isUpdating } = useUpdateEvent();
-  const saveEdit = async (id: string) => {
-    const data = await updateEvent({
-      id,
-      player_id: editPlayer!,
-      event_type: editEventType!,
-      target_player_id: editTargetPlayer,
-    });
-    if (data) {
-      setEvents((prev) => prev.map((e) => (e.id === id ? data : e)));
-      setEditingEventId(null);
-    }
-  };
-
-  const cancelEdit = () => {
-    setEditingEventId(null);
   };
 
   // Load session using reusable hook
@@ -141,8 +110,8 @@ export default function SessionPage({
   const logEvent = async () => {
     if (isLogging) return;
 
-    if (!player || selectedPlayer === null || !selectedEventType) {
-      alert("Select player and event type");
+    if (!player || selectedPlayer === null || !isPointTypeValid) {
+      alert("Select player and point type");
       return;
     }
 
@@ -152,13 +121,13 @@ export default function SessionPage({
       session_id: sessionId,
       timestamp_seconds: timestamp,
       player_id: selectedPlayer,
-      event_type: selectedEventType,
+      event_type: selectedPointType || "",
       target_player_id: null, // for future use (e.g. who made the error or who won the point)
     });
 
     if (data) {
       setEvents((prev) => [...prev, data]);
-      setSelectedEventType(null);
+      setSelectedPointType(null);
       // keep player selected (faster workflow)
     }
   };
@@ -233,21 +202,11 @@ export default function SessionPage({
           </div>
         </div>
 
-        <div className="mt-4">
-          <p className="font-semibold mb-2">Point Type</p>
-          <EventSelector
-            value={selectedEventType}
-            onChange={setSelectedEventType}
-            eventTypes={eventTypes}
-            onValidityChange={setIsEventValid}
-          />
-        </div>
-
         <button
           onClick={logEvent}
           className={`mt-6 px-4 py-2 rounded font-semibold transition-colors duration-150
-            ${isEventValid ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
-          disabled={!isEventValid}
+            ${isPointTypeValid ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
+          disabled={!isPointTypeValid}
         >
           Log Event
         </button>
@@ -267,8 +226,6 @@ export default function SessionPage({
             </thead>
             <tbody>
               {events.map((e) => {
-                const isEditing = editingEventId === e.id;
-
                 return (
                   <tr key={e.id} className="border-t">
                     <td
@@ -278,105 +235,25 @@ export default function SessionPage({
                     >
                       {formatTime(e.timestamp_seconds)}
                     </td>
-
-                    {/* POINT TYPE */}
+                    <td>{e.event_type}</td>
                     <td>
-                      {isEditing ? (
-                        <select
-                          value={editEventType || ""}
-                          onChange={(ev) => setEditEventType(ev.target.value)}
-                        >
-                          {eventTypes.map((et) => (
-                            <option key={et} value={et}>
-                              {et}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        e.event_type
-                      )}
+                      {orderedSessionPlayers.find((pl) => pl.id === e.player_id)
+                        ?.label || e.player_id}
                     </td>
-
-                    {/* PLAYER */}
                     <td>
-                      {isEditing ? (
-                        <select
-                          value={editPlayer ?? ""}
-                          onChange={(ev) =>
-                            setEditPlayer(Number(ev.target.value))
-                          }
-                        >
-                          {orderedSessionPlayers.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        orderedSessionPlayers.find(
-                          (pl) => pl.id === e.player_id,
-                        )?.label || e.player_id
-                      )}
+                      {orderedSessionPlayers.find(
+                        (pl) => pl.id === e.target_player_id,
+                      )?.label ||
+                        (e.target_player_id ?? "—")}
                     </td>
-
-                    {/* TARGET PLAYER */}
-                    <td>
-                      {isEditing ? (
-                        <select
-                          value={editTargetPlayer ?? ""}
-                          onChange={(ev) =>
-                            setEditTargetPlayer(Number(ev.target.value))
-                          }
-                        >
-                          <option value="">—</option>
-                          {orderedSessionPlayers.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        orderedSessionPlayers.find(
-                          (pl) => pl.id === e.target_player_id,
-                        )?.label ||
-                        (e.target_player_id ?? "—")
-                      )}
-                    </td>
-
-                    {/* ACTIONS */}
                     <td className="space-x-2">
-                      {isEditing ? (
-                        <>
-                          <button
-                            onClick={() => saveEdit(e.id)}
-                            className="text-green-600"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="text-gray-500"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => startEdit(e)}
-                            className="text-blue-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(e.id)}
-                            className="text-red-600"
-                            disabled={deletingEvent}
-                          >
-                            {deletingEvent ? "Deleting..." : "Delete"}
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleDeleteEvent(e.id)}
+                        className="text-red-600"
+                        disabled={deletingEvent}
+                      >
+                        {deletingEvent ? "Deleting..." : "Delete"}
+                      </button>
                     </td>
                   </tr>
                 );
