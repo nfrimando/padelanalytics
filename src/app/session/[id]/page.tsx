@@ -9,6 +9,8 @@ import { useCreateEvent } from "@/lib/useCreateEvent";
 import { useDeleteEvent } from "@/lib/useDeleteEvent";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { usePlayers } from "@/lib/usePlayers";
+import SessionPlayerSelector from "@/app/components/SessionPlayerSelector";
+import EventSelector from "@/app/components/EventSelector";
 
 import React from "react";
 import { notFound } from "next/navigation";
@@ -18,6 +20,59 @@ function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// for getting partner and opponent position
+function getPartnerAndOpponentPositions(selectedPosition: number): {
+  PartnerPosition: number[];
+  OpponentPositions: number[];
+} {
+  switch (selectedPosition) {
+    case 1:
+      return { PartnerPosition: [2], OpponentPositions: [3, 4] };
+    case 2:
+      return { PartnerPosition: [1], OpponentPositions: [3, 4] };
+    case 3:
+      return { PartnerPosition: [4], OpponentPositions: [1, 2] };
+    case 4:
+      return { PartnerPosition: [3], OpponentPositions: [1, 2] };
+    default:
+      return { PartnerPosition: [], OpponentPositions: [] };
+  }
+}
+
+const EVENT_NAMES = [
+  "winner",
+  "winner_fed",
+  "winner_assisted",
+  "forced_error",
+  "unforced_error_attack",
+  "unforced_error_defense",
+];
+
+function getDisabledPositionsForEvent(
+  eventName: string,
+  playerPosition: number,
+): number[] {
+  const { PartnerPosition, OpponentPositions } =
+    getPartnerAndOpponentPositions(playerPosition);
+
+  if (eventName === "winner") {
+    return [1, 2, 3, 4];
+  }
+  if (eventName === "winner_fed") {
+    return [playerPosition, ...PartnerPosition];
+  }
+  if (eventName === "winner_assisted") {
+    return [playerPosition, ...OpponentPositions];
+  }
+  if (eventName === "forced_error") {
+    return [playerPosition, ...PartnerPosition];
+  }
+  if (eventName.startsWith("unforced")) {
+    return [1, 2, 3, 4];
+  }
+  return [];
 }
 
 export default function SessionPage({
@@ -32,16 +87,20 @@ export default function SessionPage({
   const [videoLoading, setVideoLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
 
+  // Set and Game selectors
+  const [selectedSet, setSelectedSet] = useState<number>(1);
+  const [selectedGame, setSelectedGame] = useState<number>(1);
+
   // Selected Player
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+
+  // Involved Player (disabled selector)
+  const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null);
 
   // Selected Point Type
   const [selectedPointType, setSelectedPointType] = useState<string | null>(
     null,
   );
-
-  // For PointTypeSelector validity
-  const [isPointTypeValid, setIsPointTypeValid] = useState(false);
 
   // Get session players (ordered by position)
   const { sessionPlayers } = useSessionPlayers(sessionId);
@@ -104,13 +163,72 @@ export default function SessionPage({
     player.seekTo(seconds, true);
   };
 
+  // Reset involvedPlayer when point type or selected player changes
+  useEffect(() => {
+    setInvolvedPlayer(null);
+  }, [selectedPointType, selectedPlayer]);
+
+  // For Log Event button enable/disable logic
+  const isLogEventEnabled = (() => {
+    // Must have selected player and point type
+    if (!selectedPlayer || !selectedPointType) return false;
+
+    // Compute disabled positions for involved player
+    const playerObj = orderedSessionPlayers.find(
+      (p) => p.id === selectedPlayer,
+    );
+    const disabledPositions =
+      selectedPlayer && selectedPointType && playerObj
+        ? getDisabledPositionsForEvent(selectedPointType, playerObj.position)
+        : orderedSessionPlayers.map((p) => p.position);
+
+    // If all involved player buttons are disabled, allow log event
+    const allPositions = orderedSessionPlayers.map((p) => p.position);
+    const allDisabled = allPositions.every((pos) =>
+      disabledPositions.includes(pos),
+    );
+    if (allDisabled) return true;
+
+    // Otherwise, must have a selected involved player that is not disabled
+    if (
+      involvedPlayer &&
+      !disabledPositions.includes(
+        orderedSessionPlayers.find((p) => p.id === involvedPlayer)?.position ??
+          0,
+      )
+    ) {
+      return true;
+    }
+    return false;
+  })();
+
+  useEffect(() => {
+    if (selectedPointType === "winner_assisted" && selectedPlayer) {
+      const playerObj = orderedSessionPlayers.find(
+        (p) => p.id === selectedPlayer,
+      );
+      if (playerObj) {
+        const { PartnerPosition } = getPartnerAndOpponentPositions(
+          playerObj.position,
+        );
+        // Find the player with the partner position
+        const partner = orderedSessionPlayers.find(
+          (p) => p.position === PartnerPosition[0],
+        );
+        if (partner) {
+          setInvolvedPlayer(partner.id);
+        }
+      }
+    }
+  }, [selectedPointType, selectedPlayer, orderedSessionPlayers]);
+
   // Log event using useCreateEvent hook
   const { createEvent, loading: isLogging } = useCreateEvent();
 
   const logEvent = async () => {
     if (isLogging) return;
 
-    if (!player || selectedPlayer === null || !isPointTypeValid) {
+    if (!player || selectedPlayer === null || !selectedPointType) {
       alert("Select player and point type");
       return;
     }
@@ -122,7 +240,9 @@ export default function SessionPage({
       timestamp_seconds: timestamp,
       player_id: selectedPlayer,
       event_type: selectedPointType || "",
-      target_player_id: null, // for future use (e.g. who made the error or who won the point)
+      target_player_id: involvedPlayer,
+      set_number: selectedSet,
+      game_number: selectedGame,
     });
 
     if (data) {
@@ -182,46 +302,97 @@ export default function SessionPage({
       <div>
         <h2 className="font-bold mb-4 mt-8">Log Event</h2>
 
+        {/* Set and Game Selectors */}
+        <div className="flex gap-4 mb-4">
+          <div>
+            <p className="font-semibold mb-2">Set</p>
+            <select
+              className="border rounded px-2 py-1"
+              value={selectedSet}
+              onChange={(e) => setSelectedSet(Number(e.target.value))}
+            >
+              {[1, 2, 3, 4, 5].map((num) => (
+                <option key={num} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <p className="font-semibold mb-2">Game</p>
+            <select
+              className="border rounded px-2 py-1"
+              value={selectedGame}
+              onChange={(e) => setSelectedGame(Number(e.target.value))}
+            >
+              {Array.from({ length: 13 }, (_, i) => i + 1).map((num) => (
+                <option key={num} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div>
           <p className="font-semibold mb-2">Player</p>
-          <div className="flex gap-2">
-            {orderedSessionPlayers.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPlayer(p.id)}
-                className={`px-3 py-1 rounded border font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-150 ${
-                  selectedPlayer === p.id
-                    ? "bg-indigo-700 text-white border-indigo-700 hover:bg-indigo-800"
-                    : "bg-white text-black border-gray-400 hover:bg-indigo-100"
-                }`}
-                title={`Position ${p.position}`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <SessionPlayerSelector
+            players={orderedSessionPlayers}
+            selectedPlayer={selectedPlayer}
+            onChange={setSelectedPlayer}
+          />
+        </div>
+
+        {/* Event Selector between Player and Involved Player */}
+        <div className="mt-4">
+          <p className="font-semibold mb-2">Point Type</p>
+          <EventSelector
+            eventNames={EVENT_NAMES}
+            value={selectedPointType}
+            onChange={setSelectedPointType}
+          />
+        </div>
+
+        <div className="mt-4">
+          <p className="font-semibold mb-2">Involved Player</p>
+          <SessionPlayerSelector
+            players={orderedSessionPlayers}
+            selectedPlayer={involvedPlayer}
+            onChange={setInvolvedPlayer}
+            disabledPositions={
+              selectedPlayer && selectedPointType
+                ? getDisabledPositionsForEvent(
+                    selectedPointType,
+                    orderedSessionPlayers.find((p) => p.id === selectedPlayer)
+                      ?.position ?? 0,
+                  )
+                : orderedSessionPlayers.map((p) => p.position)
+            }
+          />
         </div>
 
         <button
           onClick={logEvent}
           className={`mt-6 px-4 py-2 rounded font-semibold transition-colors duration-150
-            ${isPointTypeValid ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
-          disabled={!isPointTypeValid}
+            ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
+          disabled={!isLogEventEnabled}
         >
           Log Event
         </button>
 
-        {/* EVENTS TABLE */}
+        {/* Points Table */}
         <div className="mt-6">
-          <h2 className="font-bold mb-2">Events</h2>
+          <h2 className="font-bold mb-2">Points Table</h2>
 
           <table className="w-full text-sm text-center">
             <thead>
               <tr>
                 <th>Time</th>
+                <th>Set</th>
+                <th>Game</th>
                 <th>Type</th>
                 <th>Player</th>
-                <th>Target Player</th>
+                <th>Involved Player</th>
               </tr>
             </thead>
             <tbody>
@@ -235,6 +406,8 @@ export default function SessionPage({
                     >
                       {formatTime(e.timestamp_seconds)}
                     </td>
+                    <td>{e.set_number ?? "—"}</td>
+                    <td>{e.game_number ?? "—"}</td>
                     <td>{e.event_type}</td>
                     <td>
                       {orderedSessionPlayers.find((pl) => pl.id === e.player_id)

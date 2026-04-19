@@ -7,6 +7,8 @@ interface CreateEventParams {
   player_id: number;
   event_type: string;
   target_player_id?: number | null;
+  set_number: number;
+  game_number: number;
 }
 
 export function useCreateEvent() {
@@ -19,6 +21,8 @@ export function useCreateEvent() {
     player_id,
     event_type,
     target_player_id = null,
+    set_number,
+    game_number,
   }: CreateEventParams) => {
     setLoading(true);
     setError(null);
@@ -30,12 +34,14 @@ export function useCreateEvent() {
         player_id,
         event_type,
         target_player_id,
+        set_number,
+        game_number,
       })
       .select()
       .single();
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError(typeof error === "string" ? error : error.message);
       return null;
     }
     return data;

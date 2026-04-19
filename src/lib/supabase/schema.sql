@@ -8,9 +8,14 @@ CREATE TABLE public.events (
   event_type text NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   player_id integer NOT NULL,
+  target_player_id integer,
+  updated_at timestamp with time zone DEFAULT now(),
+  set_number integer NOT NULL DEFAULT 1,
+  game_number integer NOT NULL DEFAULT 1,
   CONSTRAINT events_pkey PRIMARY KEY (id),
   CONSTRAINT events_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id),
-  CONSTRAINT events_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(player_id)
+  CONSTRAINT events_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(player_id),
+  CONSTRAINT events_target_player_fkey FOREIGN KEY (target_player_id) REFERENCES public.players(player_id)
 );
 CREATE TABLE public.players (
   player_id integer NOT NULL DEFAULT nextval('players_player_id_seq'::regclass),
