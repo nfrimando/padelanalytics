@@ -190,7 +190,7 @@ export default function SessionPage({
 
   // Seek video to specific time
   const seekToEvent = (seconds: number) => {
-    player.seekTo(seconds - 10, true);
+    player.seekTo(seconds - 12, true);
   };
 
   // Spacebar play/pause toggle
@@ -437,9 +437,24 @@ export default function SessionPage({
         <div className="mt-4">
           <p className="font-semibold mb-2">Point Type</p>
           <EventSelector
-            eventNames={EVENT_NAMES}
-            value={selectedPointType}
-            onChange={setSelectedPointType}
+            eventNames={EVENT_NAMES.map(
+              (name) =>
+                name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, " "),
+            )}
+            value={
+              selectedPointType &&
+              selectedPointType.charAt(0).toUpperCase() +
+                selectedPointType.slice(1).replace(/_/g, " ")
+            }
+            onChange={(val) => {
+              // Convert back to original event name format
+              const idx = EVENT_NAMES.map(
+                (name) =>
+                  name.charAt(0).toUpperCase() +
+                  name.slice(1).replace(/_/g, " "),
+              ).indexOf(val);
+              setSelectedPointType(idx !== -1 ? EVENT_NAMES[idx] : val);
+            }}
           />
         </div>
 
