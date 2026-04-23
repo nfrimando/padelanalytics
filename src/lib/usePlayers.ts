@@ -1,28 +1,18 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queries/keys";
+import { fetchPlayers } from "@/lib/queries/supabase";
 
 export function usePlayers() {
-  const [players, setPlayers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: queryKeys.players(),
+    queryFn: fetchPlayers,
+    // Players change rarely so we cache them longer than the default 5 mins
+    staleTime: 1000 * 60 * 10,
+  });
 
-  useEffect(() => {
-    setLoading(true);
-    const fetchPlayers = async () => {
-      const { data, error } = await supabase
-        .from("players")
-        .select("*");
-      if (error) {
-        setError(error.message);
-        setPlayers([]);
-      } else {
-        setPlayers(data || []);
-        setError(null);
-      }
-      setLoading(false);
-    };
-    fetchPlayers();
-  }, []);
-
-  return { players, loading, error };
+  return {
+    players: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+  };
 }

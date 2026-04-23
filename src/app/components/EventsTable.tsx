@@ -11,24 +11,24 @@ import { useUpdateEvent } from "@/lib/useUpdateEvent";
 import { useDeleteEvent } from "@/lib/useDeleteEvent";
 
 interface EventsTableProps {
+  sessionId: string;
   events: Event[];
   players: SessionPlayerOption[];
   onSeek: (seconds: number) => void;
-  onEventUpdated: (updated: Event) => void;
-  onEventDeleted: (id: string) => void;
 }
 
 export default function EventsTable({
+  sessionId,
   events,
   players,
   onSeek,
-  onEventUpdated,
-  onEventDeleted,
 }: EventsTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<Event>>({});
-  const { updateEvent, loading: updatingEvent } = useUpdateEvent();
-  const { deleteEvent, loading: deletingEvent } = useDeleteEvent();
+
+  // Pass sessionId so the hooks know which cache entry to update
+  const { updateEvent, loading: updatingEvent } = useUpdateEvent(sessionId);
+  const { deleteEvent, loading: deletingEvent } = useDeleteEvent(sessionId);
 
   const startEdit = (event: Event) => {
     setEditingId(event.id);
@@ -48,17 +48,15 @@ export default function EventsTable({
   };
 
   const saveEdit = async (id: string) => {
-    const updated = await updateEvent({ id, ...editFields });
-    if (updated) {
-      onEventUpdated(updated);
-      setEditingId(null);
-      setEditFields({});
-    }
+    await updateEvent({ id, ...editFields });
+    // No callback needed — useUpdateEvent's onSuccess updated the cache
+    setEditingId(null);
+    setEditFields({});
   };
 
   const handleDelete = async (id: string) => {
-    const success = await deleteEvent(id);
-    if (success) onEventDeleted(id);
+    await deleteEvent(id);
+    // No callback needed — useDeleteEvent's onSuccess updated the cache
   };
 
   return (

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import React from "react";
 
-import { supabase } from "@/lib/supabase/client";
 import { useSession } from "@/lib/useSession";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { useCreateEvent } from "@/lib/useCreateEvent";
@@ -14,7 +13,11 @@ import VideoPlayer from "@/app/components/VideoPlayer";
 import EventLogger from "@/app/components/EventLogger";
 import EventsTable from "@/app/components/EventsTable";
 
-import type { Event, EventType } from "@/lib/utils/types";
+import type { EventType } from "@/lib/utils/types";
+
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queries/keys";
+import { fetchSessionEvents } from "@/lib/queries/supabase";
 
 export default function SessionPage({
   params,
@@ -25,7 +28,6 @@ export default function SessionPage({
 
   const [ytPlayer, setYtPlayer] = useState<any>(null);
   const [videoLoading, setVideoLoading] = useState(true);
-  const [events, setEvents] = useState<Event[]>([]);
 
   const [selectedSet, setSelectedSet] = useState(1);
   const [selectedGame, setSelectedGame] = useState(1);
@@ -35,27 +37,34 @@ export default function SessionPage({
   );
   const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null);
 
-  const { session, error: sessionError } = useSession(sessionId);
+  // FIX 4: useSession now returns a React Query object directly
+  const { data: session, error: sessionError } = useSession(sessionId);
   const { sessionPlayers } = useSessionPlayers(sessionId);
-  const { createEvent, loading: isLogging } = useCreateEvent();
+
+  // FIX 1: only one declaration of useCreateEvent, with sessionId
+  const { createEvent, loading: isLogging } = useCreateEvent(sessionId);
+
+  // FIX 2: handleLogEvent is defined here
+  const handleLogEvent = async (decrementSeconds = 0) => {
+    if (!ytPlayer || !selectedPlayer || !selectedPointType || isLogging) return;
+    const timestamp = Math.max(0, ytPlayer.getCurrentTime() - decrementSeconds);
+    await createEvent({
+      session_id: sessionId,
+      timestamp_seconds: timestamp,
+      player_id: selectedPlayer,
+      event_type: selectedPointType,
+      target_player_id: involvedPlayer,
+      set_number: selectedSet,
+      game_number: selectedGame,
+    });
+    // No setEvents needed — cache handles it
+    setSelectedPointType(null);
+  };
 
   // 404 on bad session
   useEffect(() => {
     if (sessionError) notFound();
   }, [sessionError]);
-
-  // Load events
-  useEffect(() => {
-    if (!sessionId) return;
-    supabase
-      .from("events")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("timestamp_seconds", { ascending: true })
-      .then(({ data }) => {
-        if (data) setEvents(data as Event[]);
-      });
-  }, [sessionId]);
 
   // Reset involved player when point type or player changes
   useEffect(() => {
@@ -100,23 +109,11 @@ export default function SessionPage({
     return () => window.removeEventListener("keydown", handleKeydown);
   }, [ytPlayer]);
 
-  const handleLogEvent = async (decrementSeconds = 0) => {
-    if (!ytPlayer || !selectedPlayer || !selectedPointType || isLogging) return;
-    const timestamp = Math.max(0, ytPlayer.getCurrentTime() - decrementSeconds);
-    const data = await createEvent({
-      session_id: sessionId,
-      timestamp_seconds: timestamp,
-      player_id: selectedPlayer,
-      event_type: selectedPointType,
-      target_player_id: involvedPlayer,
-      set_number: selectedSet,
-      game_number: selectedGame,
-    });
-    if (data) {
-      setEvents((prev) => [...prev, data as Event]);
-      setSelectedPointType(null);
-    }
-  };
+  const { data: events = [] } = useQuery({
+    queryKey: queryKeys.sessionEvents(sessionId),
+    queryFn: () => fetchSessionEvents(sessionId),
+    enabled: !!sessionId,
+  });
 
   return (
     <div className="p-6 grid grid-cols-2 gap-6 relative">
@@ -156,17 +153,10 @@ export default function SessionPage({
           onLogSecondsAgo={handleLogEvent}
         />
         <EventsTable
+          sessionId={sessionId}
           events={events}
           players={sessionPlayers}
           onSeek={(s) => ytPlayer?.seekTo(s, true)}
-          onEventUpdated={(updated) =>
-            setEvents((prev) =>
-              prev.map((e) => (e.id === updated.id ? updated : e)),
-            )
-          }
-          onEventDeleted={(id) =>
-            setEvents((prev) => prev.filter((e) => e.id !== id))
-          }
         />
       </div>
     </div>

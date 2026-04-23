@@ -1,38 +1,25 @@
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queries/keys";
+import { updateEventMutation } from "@/lib/queries/supabase";
 
-export interface UpdateEventParams {
-  id: string;
-  // Only include fields that can be updated
-  player_id?: number;
-  event_type?: string;
-  target_player_id?: number | null;
-  set_number?: number;
-  game_number?: number;
-  timestamp_seconds?: number;
-}
+export function useUpdateEvent(sessionId: string) {
+  const queryClient = useQueryClient();
 
-export function useUpdateEvent() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const mutation = useMutation({
+    mutationFn: updateEventMutation,
+    onSuccess: (updatedEvent) => {
+      // Swap the old version of the event for the updated one in the cache
+      queryClient.setQueryData(
+        queryKeys.sessionEvents(sessionId),
+        (old: any[] = []) =>
+          old.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
+      );
+    },
+  });
 
-  const updateEvent = async (params: UpdateEventParams) => {
-    setLoading(true);
-    setError(null);
-    const { id, ...fields } = params;
-    const { data, error } = await supabase
-      .from("events")
-      .update(fields)
-      .eq("id", id)
-      .select()
-      .single();
-    setLoading(false);
-    if (error) {
-      setError(typeof error === "string" ? error : error.message);
-      return null;
-    }
-    return data;
+  return {
+    updateEvent: mutation.mutateAsync,
+    loading: mutation.isPending,
+    error: mutation.error?.message ?? null,
   };
-
-  return { updateEvent, loading, error };
 }
