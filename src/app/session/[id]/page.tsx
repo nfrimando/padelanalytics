@@ -12,6 +12,12 @@ import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { usePlayers } from "@/lib/usePlayers";
 import SessionPlayerSelector from "@/app/components/SessionPlayerSelector";
 import EventSelector from "@/app/components/EventSelector";
+import type {
+  Event as EventTypeObj,
+  EventType,
+  PlayerPosition,
+  SessionPlayerOption,
+} from "@/lib/types";
 
 import React from "react";
 import { notFound } from "next/navigation";
@@ -24,9 +30,9 @@ function formatTime(seconds: number) {
 }
 
 // for getting partner and opponent position
-function getPartnerAndOpponentPositions(selectedPosition: number): {
-  PartnerPosition: number[];
-  OpponentPositions: number[];
+function getPartnerAndOpponentPositions(selectedPosition: PlayerPosition): {
+  PartnerPosition: PlayerPosition[];
+  OpponentPositions: PlayerPosition[];
 } {
   switch (selectedPosition) {
     case 1:
@@ -42,7 +48,7 @@ function getPartnerAndOpponentPositions(selectedPosition: number): {
   }
 }
 
-const EVENT_NAMES = [
+const EVENT_NAMES: EventType[] = [
   "winner",
   "winner_fed",
   "winner_assisted",
@@ -52,9 +58,9 @@ const EVENT_NAMES = [
 ];
 
 function getDisabledPositionsForEvent(
-  eventName: string,
-  playerPosition: number,
-): number[] {
+  eventName: EventType,
+  playerPosition: PlayerPosition,
+): PlayerPosition[] {
   const { PartnerPosition, OpponentPositions } =
     getPartnerAndOpponentPositions(playerPosition);
 
@@ -84,14 +90,14 @@ export default function SessionPage({
   const { id: sessionId } = React.use(params);
 
   const [videoId, setVideoId] = useState<string | null>(null);
-  const [player, setPlayer] = useState<any>(null);
+  const [player, setPlayer] = useState<any>(null); // YouTube player instance, no type available
   const [videoLoading, setVideoLoading] = useState(true);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<EventTypeObj[]>([]); // Use Event type
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [editFields, setEditFields] = useState<any>({});
+  const [editFields, setEditFields] = useState<Partial<EventTypeObj>>({});
   const { updateEvent, loading: updatingEvent } = useUpdateEvent();
 
-  const startEdit = (event: any) => {
+  const startEdit = (event: EventTypeObj) => {
     setEditingEventId(event.id);
     setEditFields({
       player_id: event.player_id,
@@ -122,13 +128,13 @@ export default function SessionPage({
   const [selectedGame, setSelectedGame] = useState<number>(1);
 
   // Selected Player
-  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null); // player_id
 
   // Involved Player (disabled selector)
-  const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null);
+  const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null); // player_id
 
   // Selected Point Type
-  const [selectedPointType, setSelectedPointType] = useState<string | null>(
+  const [selectedPointType, setSelectedPointType] = useState<EventType | null>(
     null,
   );
 
@@ -136,7 +142,7 @@ export default function SessionPage({
   const { sessionPlayers } = useSessionPlayers(sessionId);
   const { players: allPlayers } = usePlayers();
   // Map sessionPlayers to include player info
-  const orderedSessionPlayers = [...sessionPlayers]
+  const orderedSessionPlayers: SessionPlayerOption[] = [...sessionPlayers]
     .sort((a, b) => a.position - b.position)
     .map((sp) => {
       const player = allPlayers.find((p) => p.player_id === sp.player_id);
@@ -182,7 +188,7 @@ export default function SessionPage({
         .eq("session_id", sessionId)
         .order("timestamp_seconds", { ascending: true });
 
-      if (data) setEvents(data);
+      if (data) setEvents(data as EventTypeObj[]);
     };
 
     fetchEvents();
@@ -280,14 +286,16 @@ export default function SessionPage({
     if (allDisabled) return true;
 
     // Otherwise, must have a selected involved player that is not disabled
-    if (
-      involvedPlayer &&
-      !disabledPositions.includes(
-        orderedSessionPlayers.find((p) => p.id === involvedPlayer)?.position ??
-          0,
-      )
-    ) {
-      return true;
+    if (involvedPlayer) {
+      const involvedPlayerObj = orderedSessionPlayers.find(
+        (p) => p.id === involvedPlayer,
+      );
+      if (
+        involvedPlayerObj &&
+        !disabledPositions.includes(involvedPlayerObj.position)
+      ) {
+        return true;
+      }
     }
     return false;
   })();
@@ -332,7 +340,7 @@ export default function SessionPage({
       session_id: sessionId,
       timestamp_seconds: timestamp,
       player_id: selectedPlayer,
-      event_type: selectedPointType || "",
+      event_type: selectedPointType,
       target_player_id: involvedPlayer,
       set_number: selectedSet,
       game_number: selectedGame,
@@ -456,13 +464,15 @@ export default function SessionPage({
                 selectedPointType.slice(1).replace(/_/g, " ")
             }
             onChange={(val) => {
-              // Convert back to original event name format
+              // Find the index of the selected label
               const idx = EVENT_NAMES.map(
                 (name) =>
                   name.charAt(0).toUpperCase() +
                   name.slice(1).replace(/_/g, " "),
               ).indexOf(val);
-              setSelectedPointType(idx !== -1 ? EVENT_NAMES[idx] : val);
+
+              // Only set if found, otherwise set null
+              setSelectedPointType(idx !== -1 ? EVENT_NAMES[idx] : null);
             }}
           />
         </div>
@@ -475,11 +485,17 @@ export default function SessionPage({
             onChange={setInvolvedPlayer}
             disabledPositions={
               selectedPlayer && selectedPointType
-                ? getDisabledPositionsForEvent(
-                    selectedPointType,
-                    orderedSessionPlayers.find((p) => p.id === selectedPlayer)
-                      ?.position ?? 0,
-                  )
+                ? (() => {
+                    const found = orderedSessionPlayers.find(
+                      (p) => p.id === selectedPlayer,
+                    );
+                    return found
+                      ? getDisabledPositionsForEvent(
+                          selectedPointType,
+                          found.position,
+                        )
+                      : orderedSessionPlayers.map((p) => p.position);
+                  })()
                 : orderedSessionPlayers.map((p) => p.position)
             }
           />
@@ -602,15 +618,18 @@ export default function SessionPage({
                     <td>
                       {isEditing ? (
                         <select
-                          value={editFields.event_type}
+                          value={editFields.event_type ?? ""}
                           onChange={(ev) =>
-                            setEditFields((f: any) => ({
+                            setEditFields((f) => ({
                               ...f,
-                              event_type: ev.target.value,
+                              event_type: ev.target.value as EventType,
                             }))
                           }
                           className="border rounded px-1"
                         >
+                          <option value="" disabled>
+                            Select type
+                          </option>
                           {EVENT_NAMES.map((name) => (
                             <option key={name} value={name}>
                               {name}
@@ -624,15 +643,18 @@ export default function SessionPage({
                     <td>
                       {isEditing ? (
                         <select
-                          value={editFields.player_id}
+                          value={editFields.player_id ?? ""}
                           onChange={(ev) =>
-                            setEditFields((f: any) => ({
+                            setEditFields((f) => ({
                               ...f,
                               player_id: Number(ev.target.value),
                             }))
                           }
                           className="border rounded px-1"
                         >
+                          <option value="" disabled>
+                            Select player
+                          </option>
                           {orderedSessionPlayers.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.label}

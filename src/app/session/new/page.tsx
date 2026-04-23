@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePlayers } from "@/lib/usePlayers";
+import type { Player, PlayerPosition } from "@/lib/types";
 import { useRouter } from "next/navigation";
 
 function extractVideoId(url: string) {
@@ -27,7 +28,7 @@ export default function NewSessionPage() {
     null,
     null,
     null,
-  ]);
+  ]); // Player IDs by position (PlayerPosition-1)
   const { players, loading: playersLoading } = usePlayers();
   // Handler for player select
   const handlePlayerSelect = (index: number, playerId: number) => {
@@ -103,7 +104,7 @@ export default function NewSessionPage() {
   };
 
   // Sort players alphabetically by nickname (fallback to player_name)
-  const sortedPlayers = [...players].sort((a, b) => {
+  const sortedPlayers: Player[] = [...players].sort((a: Player, b: Player) => {
     const nameA = (a.nickname || a.player_name || "").toLowerCase();
     const nameB = (b.nickname || b.player_name || "").toLowerCase();
     return nameA.localeCompare(nameB);
@@ -121,9 +122,7 @@ export default function NewSessionPage() {
           onChange={(e) => handleUrlChange(e.target.value)}
         />
         <button
-          disabled={
-            !videoId || loading || selectedPlayers.some((p) => !p)
-          }
+          disabled={!videoId || loading || selectedPlayers.some((p) => !p)}
           onClick={handleCreateSession}
           className={`px-4 py-2 rounded-r whitespace-nowrap border font-semibold transition-colors duration-150 ${
             videoId && !loading && selectedPlayers.every((p) => p)
@@ -158,7 +157,7 @@ export default function NewSessionPage() {
             <option value="" disabled>
               {playersLoading ? "Loading..." : "Select Player 1"}
             </option>
-            {sortedPlayers.map((player: any) => (
+            {sortedPlayers.map((player: Player) => (
               <option key={player.player_id} value={player.player_id}>
                 {player.nickname ||
                   player.player_name ||
@@ -181,7 +180,7 @@ export default function NewSessionPage() {
             <option value="" disabled>
               {playersLoading ? "Loading..." : "Select Player 3"}
             </option>
-            {sortedPlayers.map((player: any) => (
+            {sortedPlayers.map((player: Player) => (
               <option key={player.player_id} value={player.player_id}>
                 {player.nickname ||
                   player.player_name ||
@@ -204,7 +203,7 @@ export default function NewSessionPage() {
             <option value="" disabled>
               {playersLoading ? "Loading..." : "Select Player 2"}
             </option>
-            {sortedPlayers.map((player: any) => (
+            {sortedPlayers.map((player: Player) => (
               <option key={player.player_id} value={player.player_id}>
                 {player.nickname ||
                   player.player_name ||
@@ -227,7 +226,7 @@ export default function NewSessionPage() {
             <option value="" disabled>
               {playersLoading ? "Loading..." : "Select Player 4"}
             </option>
-            {sortedPlayers.map((player: any) => (
+            {sortedPlayers.map((player: Player) => (
               <option key={player.player_id} value={player.player_id}>
                 {player.nickname ||
                   player.player_name ||
