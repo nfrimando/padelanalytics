@@ -9,7 +9,6 @@ import { useCreateEvent } from "@/lib/useCreateEvent";
 import { useUpdateEvent } from "@/lib/useUpdateEvent";
 import { useDeleteEvent } from "@/lib/useDeleteEvent";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
-import { usePlayers } from "@/lib/usePlayers";
 import SessionPlayerSelector from "@/app/components/SessionPlayerSelector";
 import EventSelector from "@/app/components/EventSelector";
 
@@ -88,20 +87,8 @@ export default function SessionPage({
   );
 
   // Get session players (ordered by position)
-  const { sessionPlayers } = useSessionPlayers(sessionId);
-  const { players: allPlayers } = usePlayers();
-  // Map sessionPlayers to include player info
-  const orderedSessionPlayers: SessionPlayerOption[] = [...sessionPlayers]
-    .sort((a, b) => a.position - b.position)
-    .map((sp) => {
-      const player = allPlayers.find((p) => p.player_id === sp.player_id);
-      return {
-        id: sp.player_id,
-        label:
-          player?.nickname || player?.player_name || `Player ${sp.player_id}`,
-        position: sp.position,
-      };
-    });
+  const { sessionPlayers: orderedSessionPlayers } =
+    useSessionPlayers(sessionId);
 
   // Only deleting events
   const { deleteEvent: deleteEventHook, loading: deletingEvent } =
