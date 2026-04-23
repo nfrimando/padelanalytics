@@ -12,75 +12,24 @@ import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { usePlayers } from "@/lib/usePlayers";
 import SessionPlayerSelector from "@/app/components/SessionPlayerSelector";
 import EventSelector from "@/app/components/EventSelector";
+
 import type {
   Event as EventTypeObj,
   EventType,
   PlayerPosition,
   SessionPlayerOption,
-} from "@/lib/types";
+} from "@/lib/utils/types";
+import {
+  EVENT_TYPES,
+  EVENT_TYPE_LABELS,
+  getPositionRelationships,
+  getDisabledPositionsForEvent,
+  getPartnerPlayerId,
+  formatTimestamp,
+} from "@/lib/utils/session";
 
 import React from "react";
 import { notFound } from "next/navigation";
-
-// for logs
-function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-// for getting partner and opponent position
-function getPartnerAndOpponentPositions(selectedPosition: PlayerPosition): {
-  PartnerPosition: PlayerPosition[];
-  OpponentPositions: PlayerPosition[];
-} {
-  switch (selectedPosition) {
-    case 1:
-      return { PartnerPosition: [2], OpponentPositions: [3, 4] };
-    case 2:
-      return { PartnerPosition: [1], OpponentPositions: [3, 4] };
-    case 3:
-      return { PartnerPosition: [4], OpponentPositions: [1, 2] };
-    case 4:
-      return { PartnerPosition: [3], OpponentPositions: [1, 2] };
-    default:
-      return { PartnerPosition: [], OpponentPositions: [] };
-  }
-}
-
-const EVENT_NAMES: EventType[] = [
-  "winner",
-  "winner_fed",
-  "winner_assisted",
-  "forced_error",
-  "unforced_error_attack",
-  "unforced_error_defense",
-];
-
-function getDisabledPositionsForEvent(
-  eventName: EventType,
-  playerPosition: PlayerPosition,
-): PlayerPosition[] {
-  const { PartnerPosition, OpponentPositions } =
-    getPartnerAndOpponentPositions(playerPosition);
-
-  if (eventName === "winner") {
-    return [1, 2, 3, 4];
-  }
-  if (eventName === "winner_fed") {
-    return [playerPosition, ...PartnerPosition];
-  }
-  if (eventName === "winner_assisted") {
-    return [playerPosition, ...OpponentPositions];
-  }
-  if (eventName === "forced_error") {
-    return [playerPosition, ...PartnerPosition];
-  }
-  if (eventName.startsWith("unforced")) {
-    return [1, 2, 3, 4];
-  }
-  return [];
-}
 
 export default function SessionPage({
   params,
@@ -306,15 +255,12 @@ export default function SessionPage({
         (p) => p.id === selectedPlayer,
       );
       if (playerObj) {
-        const { PartnerPosition } = getPartnerAndOpponentPositions(
+        const partnerId = getPartnerPlayerId(
           playerObj.position,
+          orderedSessionPlayers,
         );
-        // Find the player with the partner position
-        const partner = orderedSessionPlayers.find(
-          (p) => p.position === PartnerPosition[0],
-        );
-        if (partner) {
-          setInvolvedPlayer(partner.id);
+        if (partnerId) {
+          setInvolvedPlayer(partnerId);
         }
       }
     }
@@ -454,25 +400,16 @@ export default function SessionPage({
         <div className="mt-4">
           <p className="font-semibold mb-2">Point Type</p>
           <EventSelector
-            eventNames={EVENT_NAMES.map(
-              (name) =>
-                name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, " "),
-            )}
+            eventNames={EVENT_TYPES.map((type) => EVENT_TYPE_LABELS[type])}
             value={
-              selectedPointType &&
-              selectedPointType.charAt(0).toUpperCase() +
-                selectedPointType.slice(1).replace(/_/g, " ")
+              selectedPointType ? EVENT_TYPE_LABELS[selectedPointType] : null
             }
             onChange={(val) => {
-              // Find the index of the selected label
-              const idx = EVENT_NAMES.map(
-                (name) =>
-                  name.charAt(0).toUpperCase() +
-                  name.slice(1).replace(/_/g, " "),
-              ).indexOf(val);
-
-              // Only set if found, otherwise set null
-              setSelectedPointType(idx !== -1 ? EVENT_NAMES[idx] : null);
+              // Find the event type by label
+              const found = EVENT_TYPES.find(
+                (type) => EVENT_TYPE_LABELS[type] === val,
+              );
+              setSelectedPointType(found ?? null);
             }}
           />
         </div>
@@ -566,7 +503,7 @@ export default function SessionPage({
                           }
                         />
                       ) : (
-                        formatTime(e.timestamp_seconds)
+                        formatTimestamp(e.timestamp_seconds)
                       )}
                     </td>
                     <td>
@@ -630,7 +567,7 @@ export default function SessionPage({
                           <option value="" disabled>
                             Select type
                           </option>
-                          {EVENT_NAMES.map((name) => (
+                          {EVENT_TYPES.map((name) => (
                             <option key={name} value={name}>
                               {name}
                             </option>

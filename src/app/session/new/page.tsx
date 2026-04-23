@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePlayers } from "@/lib/usePlayers";
-import type { Player, PlayerPosition } from "@/lib/types";
+import type { Player, PlayerPosition } from "@/lib/utils/types";
 import { useRouter } from "next/navigation";
 
 function extractVideoId(url: string) {
