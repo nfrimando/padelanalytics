@@ -1,5 +1,13 @@
 import { supabase } from "@/lib/supabase/client";
-import type { Session, Event, Player, SessionPlayerOption, PlayerPosition } from "@/lib/utils/types";
+import type { 
+  Session, 
+  Event, 
+  Player, 
+  SessionPlayerOption, 
+  PlayerPosition, 
+  MatchAggregates, 
+  MatchPlayerEventAggregates 
+} from "@/lib/utils/types";
 
 // Each function is a plain async function that either returns data or throws.
 // React Query catches the thrown error and puts it in query.error for you.
@@ -87,4 +95,26 @@ export async function deleteEventMutation(id: string): Promise<string> {
   const { error } = await supabase.from("events").delete().eq("id", id);
   if (error) throw error;
   return id; // return the id so we know what to remove from the cache
+}
+
+// RPC Analytics ------------------------------------
+
+export async function fetchMatchAggregates(
+  sessionId: string
+): Promise<MatchAggregates> {
+  const { data, error } = await supabase.rpc("get_match_aggregates", {
+    session_id: sessionId,
+  });
+  if (error) throw error;
+  return data[0] as MatchAggregates;
+}
+
+export async function fetchMatchPlayerEventAggregates(
+  sessionId: string
+): Promise<MatchPlayerEventAggregates[]> {
+  const { data, error } = await supabase.rpc("get_match_players_events_aggregates", {
+    session_id: sessionId,
+  });
+  if (error) throw error;
+  return data as MatchPlayerEventAggregates[];
 }

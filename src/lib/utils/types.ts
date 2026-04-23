@@ -68,3 +68,19 @@ export interface SessionPlayerOption {
   label: string;        // nickname ?? player_name ?? fallback
   position: PlayerPosition;
 }
+
+// ─── RPC Analytics Queries ─────────────────────────────────────────────────────
+
+export interface MatchAggregates {
+  num_sets: number;
+  num_games: number;
+  num_points: number;
+}
+
+export interface MatchPlayerEventAggregates {
+  player_id: number;
+  player_name: string;
+  event_type: EventType;
+  role: "actor" | "receiver";
+  count: number;
+}
