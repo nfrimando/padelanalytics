@@ -31,7 +31,7 @@ export default function VideoPlayer({
     <div className="relative min-h-[200px]">
       {videoLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/70 dark:bg-black/70">
-          <Spinner />
+          <Spinner size="lg" />
         </div>
       )}
       <YouTube
