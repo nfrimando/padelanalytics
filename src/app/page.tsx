@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-zinc-900 dark:to-zinc-800 font-sans px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-zinc-900 dark:to-zinc-800 font-sans px-4 relative">
       <div className="max-w-2xl w-full bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-10 flex flex-col items-center">
         <h1 className="text-4xl font-extrabold text-indigo-700 dark:text-indigo-300 mb-4 text-center">
           Padel Analytics
@@ -17,6 +17,9 @@ export default function Home() {
           Start Analyzing
         </a>
       </div>
+      <span className="fixed bottom-2 right-4 text-xs text-zinc-400 opacity-70 select-none pointer-events-none">
+        v0.0.0
+      </span>
     </div>
   );
 }
