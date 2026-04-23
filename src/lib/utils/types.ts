@@ -84,3 +84,10 @@ export interface MatchPlayerEventAggregates {
   role: "actor" | "receiver";
   count: number;
 }
+
+export interface MatchSetsGamesTeamsAggregates {
+  set_number: number;
+  game_number: number;
+  team: number;
+  points_won: number;
+}

@@ -8,6 +8,7 @@ import Spinner from "@/app/components/Spinner";
 import AnalyticsPlayerEventTable from "@/app/components/AnalyticsPlayerEventTable";
 import AnalyticsMatchSummary from "@/app/components/AnalyticsMatchSummary";
 import BackToSessionButton from "@/app/components/BackToSessionButton";
+import SetGamePointsTable from "@/app/components/SetGamePointsTable";
 import {
   useMatchAggregates,
   useMatchPlayerEventAggregates,
@@ -93,6 +94,9 @@ export default function AnalysisPage({
           num_points={aggregates?.num_points}
         />
       )}
+
+      {/* Set/Game Points Table */}
+      <SetGamePointsTable sessionId={session_id} />
 
       {/* Player-Event Table */}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-8 border border-gray-100 dark:border-gray-800">
