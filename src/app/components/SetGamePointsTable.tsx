@@ -51,37 +51,39 @@ export default function SetGamePointsTable({ sessionId }: Props) {
       <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
         Set/Game Points by Team
       </h2>
-      <table className="min-w-full border text-sm mb-2">
-        <thead>
-          <tr>
-            <th className="px-3 py-2 border-b text-left">Game</th>
-            {sets.map((set) => (
-              <th key={set} className="px-3 py-2 border-b text-center">
-                Set {set}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {games.map((game) => (
-            <tr key={game}>
-              <td className="px-3 py-2 border-b">{game}</td>
-              {sets.map((set) => {
-                const cell = lookup[game]?.[set] || { t1: 0, t2: 0 };
-                const display =
-                  cell.t1 === 0 && cell.t2 === 0
-                    ? "-"
-                    : `${cell.t1}-${cell.t2}`;
-                return (
-                  <td key={set} className="px-3 py-2 border-b text-center">
-                    {display}
-                  </td>
-                );
-              })}
+      <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
+        <table className="min-w-full border text-sm mb-2">
+          <thead>
+            <tr>
+              <th className="px-3 py-2 border-b text-left">Game</th>
+              {sets.map((set) => (
+                <th key={set} className="px-3 py-2 border-b text-center">
+                  Set {set}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {games.map((game) => (
+              <tr key={game}>
+                <td className="px-3 py-2 border-b">{game}</td>
+                {sets.map((set) => {
+                  const cell = lookup[game]?.[set] || { t1: 0, t2: 0 };
+                  const display =
+                    cell.t1 === 0 && cell.t2 === 0
+                      ? "-"
+                      : `${cell.t1}-${cell.t2}`;
+                  return (
+                    <td key={set} className="px-3 py-2 border-b text-center">
+                      {display}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
