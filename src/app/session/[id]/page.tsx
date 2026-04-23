@@ -1,34 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import { useSession } from "@/lib/useSession";
-import YouTube from "react-youtube";
-import { supabase } from "@/lib/supabase/client";
-import { useCreateEvent } from "@/lib/useCreateEvent";
-import { useUpdateEvent } from "@/lib/useUpdateEvent";
-import { useDeleteEvent } from "@/lib/useDeleteEvent";
-import { useSessionPlayers } from "@/lib/useSessionPlayers";
-import SessionPlayerSelector from "@/app/components/SessionPlayerSelector";
-import EventSelector from "@/app/components/EventSelector";
-
-import type {
-  Event as EventTypeObj,
-  EventType,
-  PlayerPosition,
-  SessionPlayerOption,
-} from "@/lib/utils/types";
-import {
-  EVENT_TYPES,
-  EVENT_TYPE_LABELS,
-  getPositionRelationships,
-  getDisabledPositionsForEvent,
-  getPartnerPlayerId,
-  formatTimestamp,
-} from "@/lib/utils/session";
-
-import React from "react";
 import { notFound } from "next/navigation";
+import React from "react";
+
+import { supabase } from "@/lib/supabase/client";
+import { useSession } from "@/lib/useSession";
+import { useSessionPlayers } from "@/lib/useSessionPlayers";
+import { useCreateEvent } from "@/lib/useCreateEvent";
+import { getPartnerPlayerId } from "@/lib/utils/session";
+
+import VideoPlayer from "@/app/components/VideoPlayer";
+import EventLogger from "@/app/components/EventLogger";
+import EventsTable from "@/app/components/EventsTable";
+
+import type { Event, EventType } from "@/lib/utils/types";
 
 export default function SessionPage({
   params,
@@ -37,238 +23,86 @@ export default function SessionPage({
 }) {
   const { id: sessionId } = React.use(params);
 
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [player, setPlayer] = useState<any>(null); // YouTube player instance, no type available
+  const [ytPlayer, setYtPlayer] = useState<any>(null);
   const [videoLoading, setVideoLoading] = useState(true);
-  const [events, setEvents] = useState<EventTypeObj[]>([]); // Use Event type
-  const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [editFields, setEditFields] = useState<Partial<EventTypeObj>>({});
-  const { updateEvent, loading: updatingEvent } = useUpdateEvent();
+  const [events, setEvents] = useState<Event[]>([]);
 
-  const startEdit = (event: EventTypeObj) => {
-    setEditingEventId(event.id);
-    setEditFields({
-      player_id: event.player_id,
-      event_type: event.event_type,
-      target_player_id: event.target_player_id,
-      set_number: event.set_number,
-      game_number: event.game_number,
-      timestamp_seconds: event.timestamp_seconds,
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingEventId(null);
-    setEditFields({});
-  };
-
-  const saveEdit = async (id: string) => {
-    const updated = await updateEvent({ id, ...editFields });
-    if (updated) {
-      setEvents((prev) => prev.map((e) => (e.id === id ? updated : e)));
-      setEditingEventId(null);
-      setEditFields({});
-    }
-  };
-
-  // Set and Game selectors
-  const [selectedSet, setSelectedSet] = useState<number>(1);
-  const [selectedGame, setSelectedGame] = useState<number>(1);
-
-  // Selected Player
-  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null); // player_id
-
-  // Involved Player (disabled selector)
-  const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null); // player_id
-
-  // Selected Point Type
+  const [selectedSet, setSelectedSet] = useState(1);
+  const [selectedGame, setSelectedGame] = useState(1);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [selectedPointType, setSelectedPointType] = useState<EventType | null>(
     null,
   );
+  const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null);
 
-  // Get session players (ordered by position)
-  const { sessionPlayers: orderedSessionPlayers } =
-    useSessionPlayers(sessionId);
+  const { session, error: sessionError } = useSession(sessionId);
+  const { sessionPlayers } = useSessionPlayers(sessionId);
+  const { createEvent, loading: isLogging } = useCreateEvent();
 
-  // Only deleting events
-  const { deleteEvent: deleteEventHook, loading: deletingEvent } =
-    useDeleteEvent();
-  const handleDeleteEvent = async (id: string) => {
-    const success = await deleteEventHook(id);
-    if (success) {
-      setEvents((prev) => prev.filter((e) => e.id !== id));
-    }
-  };
-
-  // Load session using reusable hook
-  const {
-    session,
-    loading: sessionLoading,
-    error: sessionError,
-  } = useSession(sessionId);
+  // 404 on bad session
   useEffect(() => {
-    if (sessionError) {
-      notFound();
-    }
-    if (session && session.youtube_video_id) {
-      setVideoId(session.youtube_video_id);
-    }
-  }, [session, sessionError]);
+    if (sessionError) notFound();
+  }, [sessionError]);
 
   // Load events
   useEffect(() => {
-    const fetchEvents = async () => {
-      const { data } = await supabase
-        .from("events")
-        .select("*")
-        .eq("session_id", sessionId)
-        .order("timestamp_seconds", { ascending: true });
-
-      if (data) setEvents(data as EventTypeObj[]);
-    };
-
-    fetchEvents();
+    if (!sessionId) return;
+    supabase
+      .from("events")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("timestamp_seconds", { ascending: true })
+      .then(({ data }) => {
+        if (data) setEvents(data as Event[]);
+      });
   }, [sessionId]);
 
-  // Seek video to specific time
-  const seekToEvent = (seconds: number) => {
-    player.seekTo(seconds, true);
-  };
-
-  // Spacebar play/pause toggle
-  useEffect(() => {
-    const handleSpacebar = (e: KeyboardEvent) => {
-      if (e.code === "Space" && player) {
-        // Avoid triggering when typing in an input or textarea
-        if (
-          (e.target as HTMLElement)?.tagName === "INPUT" ||
-          (e.target as HTMLElement)?.tagName === "TEXTAREA"
-        )
-          return;
-        e.preventDefault();
-        const state = player.getPlayerState?.();
-        if (state === 1) {
-          player.pauseVideo();
-        } else {
-          player.playVideo();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleSpacebar);
-    return () => window.removeEventListener("keydown", handleSpacebar);
-  }, [player]);
-
-  // Spacebar play/pause toggle and J/L seek
-  useEffect(() => {
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (!player) return;
-      // Avoid triggering when typing in an input or textarea
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-
-      // Spacebar or K: play/pause
-      if (e.code === "Space" || e.key === "k" || e.key === "K") {
-        e.preventDefault();
-        const state = player.getPlayerState?.();
-        if (state === 1) {
-          player.pauseVideo();
-        } else {
-          player.playVideo();
-        }
-      }
-
-      // J: rewind 10s
-      if (e.key === "j" || e.key === "J") {
-        e.preventDefault();
-        const current = player.getCurrentTime?.() ?? 0;
-        player.seekTo(Math.max(current - 10, 0), true);
-      }
-
-      // L: forward 10s
-      if (e.key === "l" || e.key === "L") {
-        e.preventDefault();
-        const current = player.getCurrentTime?.() ?? 0;
-        player.seekTo(current + 10, true);
-      }
-    };
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [player]);
-
-  // Reset involvedPlayer when point type or selected player changes
+  // Reset involved player when point type or player changes
   useEffect(() => {
     setInvolvedPlayer(null);
   }, [selectedPointType, selectedPlayer]);
 
-  // For Log Event button enable/disable logic
-  const isLogEventEnabled = (() => {
-    // Must have selected player and point type
-    if (!selectedPlayer || !selectedPointType) return false;
-
-    // Compute disabled positions for involved player
-    const playerObj = orderedSessionPlayers.find(
-      (p) => p.id === selectedPlayer,
-    );
-    const disabledPositions =
-      selectedPlayer && selectedPointType && playerObj
-        ? getDisabledPositionsForEvent(selectedPointType, playerObj.position)
-        : orderedSessionPlayers.map((p) => p.position);
-
-    // If all involved player buttons are disabled, allow log event
-    const allPositions = orderedSessionPlayers.map((p) => p.position);
-    const allDisabled = allPositions.every((pos) =>
-      disabledPositions.includes(pos),
-    );
-    if (allDisabled) return true;
-
-    // Otherwise, must have a selected involved player that is not disabled
-    if (involvedPlayer) {
-      const involvedPlayerObj = orderedSessionPlayers.find(
-        (p) => p.id === involvedPlayer,
-      );
-      if (
-        involvedPlayerObj &&
-        !disabledPositions.includes(involvedPlayerObj.position)
-      ) {
-        return true;
-      }
-    }
-    return false;
-  })();
-
+  // Auto-select partner for winner_assisted
   useEffect(() => {
-    if (selectedPointType === "winner_assisted" && selectedPlayer) {
-      const playerObj = orderedSessionPlayers.find(
-        (p) => p.id === selectedPlayer,
-      );
-      if (playerObj) {
-        const partnerId = getPartnerPlayerId(
-          playerObj.position,
-          orderedSessionPlayers,
-        );
-        if (partnerId) {
-          setInvolvedPlayer(partnerId);
-        }
+    if (selectedPointType !== "winner_assisted" || !selectedPlayer) return;
+    const playerObj = sessionPlayers.find((p) => p.id === selectedPlayer);
+    if (!playerObj) return;
+    const partnerId = getPartnerPlayerId(playerObj.position, sessionPlayers);
+    if (partnerId) setInvolvedPlayer(partnerId);
+  }, [selectedPointType, selectedPlayer, sessionPlayers]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (!ytPlayer) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.code === "Space" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        ytPlayer.getPlayerState?.() === 1
+          ? ytPlayer.pauseVideo()
+          : ytPlayer.playVideo();
       }
-    }
-  }, [selectedPointType, selectedPlayer, orderedSessionPlayers]);
+      if (e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        ytPlayer.seekTo(
+          Math.max((ytPlayer.getCurrentTime?.() ?? 0) - 10, 0),
+          true,
+        );
+      }
+      if (e.key === "l" || e.key === "L") {
+        e.preventDefault();
+        ytPlayer.seekTo((ytPlayer.getCurrentTime?.() ?? 0) + 10, true);
+      }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [ytPlayer]);
 
-  // Log event using useCreateEvent hook
-  const { createEvent, loading: isLogging } = useCreateEvent();
-
-  const logEvent = async (decrementSeconds: number = 0) => {
-    if (isLogging) return;
-
-    if (!player || selectedPlayer === null || !selectedPointType) {
-      alert("Select player and point type");
-      return;
-    }
-
-    let timestamp = player.getCurrentTime();
-    if (decrementSeconds > 0) {
-      timestamp = Math.max(0, timestamp - decrementSeconds);
-    }
-
+  const handleLogEvent = async (decrementSeconds = 0) => {
+    if (!ytPlayer || !selectedPlayer || !selectedPointType || isLogging) return;
+    const timestamp = Math.max(0, ytPlayer.getCurrentTime() - decrementSeconds);
     const data = await createEvent({
       session_id: sessionId,
       timestamp_seconds: timestamp,
@@ -278,11 +112,9 @@ export default function SessionPage({
       set_number: selectedSet,
       game_number: selectedGame,
     });
-
     if (data) {
-      setEvents((prev) => [...prev, data]);
+      setEvents((prev) => [...prev, data as Event]);
       setSelectedPointType(null);
-      // keep player selected (faster workflow)
     }
   };
 
@@ -290,376 +122,52 @@ export default function SessionPage({
     <div className="p-6 grid grid-cols-2 gap-6 relative">
       <a
         href={`/analysis/${sessionId}`}
-        className="absolute right-0 top-0 mt-4 mr-4 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition-colors font-semibold z-20"
+        className="absolute right-0 top-0 mt-4 mr-4 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 font-semibold z-20"
       >
         Analytics
       </a>
-      {/* LEFT: VIDEO */}
-      <div className="relative min-h-[200px]">
-        {videoLoading && (
-          <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/70 dark:bg-black/70">
-            <svg
-              className="animate-spin h-10 w-10 text-indigo-600"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              ></path>
-            </svg>
-          </div>
-        )}
-        {videoId && (
-          <YouTube
-            videoId={videoId}
-            onReady={(e) => {
-              setPlayer(e.target);
-              setVideoLoading(false);
-            }}
-            onStateChange={(e) => {
-              if (e.data === 1) setVideoLoading(false); // playing
-            }}
-            opts={{
-              width: "100%",
-              height: "432",
-            }}
-          />
-        )}
-      </div>
 
-      {/* RIGHT: CONTROLS */}
+      {/* LEFT: Video */}
+      {session?.youtube_video_id && (
+        <VideoPlayer
+          videoId={session.youtube_video_id}
+          videoLoading={videoLoading}
+          onReady={setYtPlayer}
+          onLoadingChange={setVideoLoading}
+        />
+      )}
+
+      {/* RIGHT: Controls + Table */}
       <div>
-        <h2 className="font-bold mb-4 mt-8">Log Event</h2>
-
-        {/* Set and Game Selectors */}
-        <div className="flex gap-4 mb-4">
-          <div>
-            <p className="font-semibold mb-2">Set</p>
-            <select
-              className="border rounded px-2 py-1"
-              value={selectedSet}
-              onChange={(e) => setSelectedSet(Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5].map((num) => (
-                <option key={num} value={num}>
-                  {num}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <p className="font-semibold mb-2">Game</p>
-            <select
-              className="border rounded px-2 py-1"
-              value={selectedGame}
-              onChange={(e) => setSelectedGame(Number(e.target.value))}
-            >
-              {Array.from({ length: 13 }, (_, i) => i + 1).map((num) => (
-                <option key={num} value={num}>
-                  {num}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <p className="font-semibold mb-2">Player</p>
-          <SessionPlayerSelector
-            players={orderedSessionPlayers}
-            selectedPlayer={selectedPlayer}
-            onChange={setSelectedPlayer}
-          />
-        </div>
-
-        {/* Event Selector between Player and Involved Player */}
-        <div className="mt-4">
-          <p className="font-semibold mb-2">Point Type</p>
-          <EventSelector
-            eventNames={EVENT_TYPES.map((type) => EVENT_TYPE_LABELS[type])}
-            value={
-              selectedPointType ? EVENT_TYPE_LABELS[selectedPointType] : null
-            }
-            onChange={(val) => {
-              // Find the event type by label
-              const found = EVENT_TYPES.find(
-                (type) => EVENT_TYPE_LABELS[type] === val,
-              );
-              setSelectedPointType(found ?? null);
-            }}
-          />
-        </div>
-
-        <div className="mt-4">
-          <p className="font-semibold mb-2">Involved Player</p>
-          <SessionPlayerSelector
-            players={orderedSessionPlayers}
-            selectedPlayer={involvedPlayer}
-            onChange={setInvolvedPlayer}
-            disabledPositions={
-              selectedPlayer && selectedPointType
-                ? (() => {
-                    const found = orderedSessionPlayers.find(
-                      (p) => p.id === selectedPlayer,
-                    );
-                    return found
-                      ? getDisabledPositionsForEvent(
-                          selectedPointType,
-                          found.position,
-                        )
-                      : orderedSessionPlayers.map((p) => p.position);
-                  })()
-                : orderedSessionPlayers.map((p) => p.position)
-            }
-          />
-        </div>
-
-        <div className="flex gap-4 mt-6">
-          <button
-            onClick={() => logEvent()}
-            className={`px-4 py-2 rounded font-semibold transition-colors duration-150
-              ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
-            disabled={!isLogEventEnabled}
-          >
-            Log Now
-          </button>
-          <button
-            onClick={() => logEvent(10)}
-            className={`px-4 py-2 rounded font-semibold transition-colors duration-150
-              ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
-            disabled={!isLogEventEnabled}
-          >
-            Log 10s ago
-          </button>
-          <button
-            onClick={() => logEvent(15)}
-            className={`px-4 py-2 rounded font-semibold transition-colors duration-150
-              ${isLogEventEnabled ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer" : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"}`}
-            disabled={!isLogEventEnabled}
-          >
-            Log 15s ago
-          </button>
-        </div>
-
-        {/* Points Table */}
-        <div className="mt-6">
-          <h2 className="font-bold mb-2">Points Table</h2>
-
-          <table className="w-full text-sm text-center">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Set</th>
-                <th>Game</th>
-                <th>Type</th>
-                <th>Player</th>
-                <th>Involved Player</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...events].reverse().map((e) => {
-                const isEditing = editingEventId === e.id;
-                return (
-                  <tr key={e.id} className="border-t">
-                    <td
-                      onClick={() => seekToEvent(e.timestamp_seconds)}
-                      className="text-blue-700 underline cursor-pointer hover:text-blue-900 transition-colors duration-100 font-semibold"
-                      title="Seek video to this time"
-                    >
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          className="w-16 border rounded px-1"
-                          value={editFields.timestamp_seconds}
-                          onChange={(ev) =>
-                            setEditFields((f: any) => ({
-                              ...f,
-                              timestamp_seconds: Number(ev.target.value),
-                            }))
-                          }
-                        />
-                      ) : (
-                        formatTimestamp(e.timestamp_seconds)
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <select
-                          value={editFields.set_number}
-                          onChange={(ev) =>
-                            setEditFields((f: any) => ({
-                              ...f,
-                              set_number: Number(ev.target.value),
-                            }))
-                          }
-                          className="border rounded px-1"
-                        >
-                          {[1, 2, 3, 4, 5].map((num) => (
-                            <option key={num} value={num}>
-                              {num}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        (e.set_number ?? "—")
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <select
-                          value={editFields.game_number}
-                          onChange={(ev) =>
-                            setEditFields((f: any) => ({
-                              ...f,
-                              game_number: Number(ev.target.value),
-                            }))
-                          }
-                          className="border rounded px-1"
-                        >
-                          {Array.from({ length: 13 }, (_, i) => i + 1).map(
-                            (num) => (
-                              <option key={num} value={num}>
-                                {num}
-                              </option>
-                            ),
-                          )}
-                        </select>
-                      ) : (
-                        (e.game_number ?? "—")
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <select
-                          value={editFields.event_type ?? ""}
-                          onChange={(ev) =>
-                            setEditFields((f) => ({
-                              ...f,
-                              event_type: ev.target.value as EventType,
-                            }))
-                          }
-                          className="border rounded px-1"
-                        >
-                          <option value="" disabled>
-                            Select type
-                          </option>
-                          {EVENT_TYPES.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        e.event_type
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <select
-                          value={editFields.player_id ?? ""}
-                          onChange={(ev) =>
-                            setEditFields((f) => ({
-                              ...f,
-                              player_id: Number(ev.target.value),
-                            }))
-                          }
-                          className="border rounded px-1"
-                        >
-                          <option value="" disabled>
-                            Select player
-                          </option>
-                          {orderedSessionPlayers.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        orderedSessionPlayers.find(
-                          (pl) => pl.id === e.player_id,
-                        )?.label || e.player_id
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <select
-                          value={editFields.target_player_id ?? ""}
-                          onChange={(ev) =>
-                            setEditFields((f: any) => ({
-                              ...f,
-                              target_player_id: ev.target.value
-                                ? Number(ev.target.value)
-                                : null,
-                            }))
-                          }
-                          className="border rounded px-1"
-                        >
-                          <option value="">—</option>
-                          {orderedSessionPlayers.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        orderedSessionPlayers.find(
-                          (pl) => pl.id === e.target_player_id,
-                        )?.label ||
-                        (e.target_player_id ?? "—")
-                      )}
-                    </td>
-                    <td className="space-x-2">
-                      {isEditing ? (
-                        <>
-                          <button
-                            onClick={() => saveEdit(e.id)}
-                            className="text-green-600"
-                            disabled={updatingEvent}
-                          >
-                            {updatingEvent ? "Saving..." : "Save"}
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="text-gray-600"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => startEdit(e)}
-                            className="text-blue-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(e.id)}
-                            className="text-red-600"
-                            disabled={deletingEvent}
-                          >
-                            {deletingEvent ? "Deleting..." : "Delete"}
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <EventLogger
+          players={sessionPlayers}
+          selectedSet={selectedSet}
+          selectedGame={selectedGame}
+          selectedPlayer={selectedPlayer}
+          selectedPointType={selectedPointType}
+          involvedPlayer={involvedPlayer}
+          isLogging={isLogging}
+          onSetChange={setSelectedSet}
+          onGameChange={setSelectedGame}
+          onPlayerChange={setSelectedPlayer}
+          onPointTypeChange={setSelectedPointType}
+          onInvolvedPlayerChange={setInvolvedPlayer}
+          onLogNow={() => handleLogEvent(0)}
+          onLogSecondsAgo={handleLogEvent}
+        />
+        <EventsTable
+          events={events}
+          players={sessionPlayers}
+          onSeek={(s) => ytPlayer?.seekTo(s, true)}
+          onEventUpdated={(updated) =>
+            setEvents((prev) =>
+              prev.map((e) => (e.id === updated.id ? updated : e)),
+            )
+          }
+          onEventDeleted={(id) =>
+            setEvents((prev) => prev.filter((e) => e.id !== id))
+          }
+        />
       </div>
     </div>
   );
