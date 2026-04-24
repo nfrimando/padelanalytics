@@ -5,6 +5,7 @@ import { usePlayers } from "@/lib/usePlayers";
 import type { Player, PlayerPosition } from "@/lib/utils/types";
 import { useRouter } from "next/navigation";
 import Spinner from "@/app/components/Spinner";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 function extractVideoId(url: string) {
   const regExp = /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([^#&?]*)/;
@@ -54,14 +55,16 @@ export default function NewSessionPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await (
-        await import("@/lib/supabase/client")
-      ).supabase.rpc("create_session_with_players", {
-        youtube_url: url,
-        youtube_video_id: videoId,
-        title: videoTitle || null,
-        player_ids: selectedPlayers,
-      });
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.rpc(
+        "create_session_with_players",
+        {
+          youtube_url: url,
+          youtube_video_id: videoId,
+          title: videoTitle || null,
+          player_ids: selectedPlayers,
+        },
+      );
       setLoading(false);
       if (error || !data) {
         setError(error?.message || "Session creation failed");
