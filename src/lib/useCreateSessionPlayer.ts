@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from './supabase/client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 interface CreateSessionPlayerParams {
   session_id: string;
@@ -14,6 +14,8 @@ export function useCreateSessionPlayer() {
   async function createSessionPlayer({ session_id, player_id, position }: CreateSessionPlayerParams) {
     setLoading(true);
     setError(null);
+
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
       .from('session_players')
       .insert([

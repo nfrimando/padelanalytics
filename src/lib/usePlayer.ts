@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
+
 
 export function usePlayer(player_id: number | null) {
   const [player, setPlayer] = useState<any>(null);
@@ -13,6 +14,8 @@ export function usePlayer(player_id: number | null) {
       return;
     }
     setLoading(true);
+
+    const supabase = createSupabaseBrowserClient()
     const fetchPlayer = async () => {
       const { data, error } = await supabase
         .from("players")

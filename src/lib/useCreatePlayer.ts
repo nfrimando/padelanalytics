@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export function useCreatePlayer() {
   const [playerName, setPlayerName] = useState("");
@@ -10,6 +10,7 @@ export function useCreatePlayer() {
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e?: React.FormEvent) => {
+
     if (e) e.preventDefault();
     setError(null);
     setSuccess(false);
@@ -18,6 +19,8 @@ export function useCreatePlayer() {
       return;
     }
     setLoading(true);
+
+    const supabase = createSupabaseBrowserClient()
     const { error } = await supabase.from("players").insert({
       player_name: playerName,
       nickname: nickname.trim() ? nickname : null,

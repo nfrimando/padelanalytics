@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { 
   Session, 
   Event, 
@@ -12,6 +12,8 @@ import type {
 
 // Each function is a plain async function that either returns data or throws.
 // React Query catches the thrown error and puts it in query.error for you.
+
+const supabase = createSupabaseBrowserClient()
 
 export async function fetchSession(sessionId: string): Promise<Session> {
   const { data, error } = await supabase
