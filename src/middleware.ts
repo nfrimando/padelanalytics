@@ -3,6 +3,7 @@ import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware'
 
 const PROTECTED_PATHS = [
     '/session', 
+    '/players',
     // '/analysis'
 ]
 
@@ -29,6 +30,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/session/:path*', 
+    '/players/:path*',
     // '/analysis/:path*'
 ],
 }

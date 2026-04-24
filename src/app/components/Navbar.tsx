@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/useAuth";
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/session/new", label: "New Session" },
+  { href: "/players", label: "Players" },
 ];
 
 export default function Navbar() {

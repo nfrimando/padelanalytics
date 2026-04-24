@@ -1,7 +1,12 @@
-import React from "react";
+"use client";
+
 import { useCreatePlayer } from "@/lib/useCreatePlayer";
 
-export default function PlayerCreate() {
+interface PlayerCreateProps {
+  onSuccess: () => void;
+}
+
+export default function PlayerCreate({ onSuccess }: PlayerCreateProps) {
   const {
     playerName,
     setPlayerName,
@@ -11,58 +16,62 @@ export default function PlayerCreate() {
     setEmail,
     loading,
     error,
-    success,
     handleSubmit,
-  } = useCreatePlayer();
+  } = useCreatePlayer(onSuccess);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-md mx-auto bg-white dark:bg-zinc-900 rounded-lg shadow p-8 flex flex-col gap-4"
-    >
-      <h2 className="text-2xl font-bold mb-2 text-center">Create Player</h2>
-      <label className="font-semibold">Full Name</label>
-      <input
-        className="border p-2 rounded w-full"
-        type="text"
-        value={playerName}
-        onChange={(e) => setPlayerName(e.target.value)}
-        placeholder="Player Name"
-        disabled={loading}
-      />
-      <label className="font-semibold">
-        Nickname <span className="text-zinc-400 font-normal">(optional)</span>
-      </label>
-      <input
-        className="border p-2 rounded w-full"
-        type="text"
-        value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
-        placeholder="Nickname (optional)"
-        disabled={loading}
-      />
-      <label className="font-semibold">
-        Email <span className="text-zinc-400 font-normal">(optional)</span>
-      </label>
-      <input
-        className="border p-2 rounded w-full"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email (optional)"
-        disabled={loading}
-      />
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Full Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          className="border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          type="text"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          placeholder="e.g. Nigel Chingago"
+          disabled={loading}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Nickname <span className="text-zinc-400 font-normal">(optional)</span>
+        </label>
+        <input
+          className="border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          type="text"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="e.g. Nignig"
+          disabled={loading}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Email <span className="text-zinc-400 font-normal">(optional)</span>
+        </label>
+        <input
+          className="border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="e.g. nigel@email.com"
+          disabled={loading}
+        />
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       <button
         type="submit"
-        className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded font-bold disabled:opacity-60"
-        disabled={loading}
+        disabled={loading || !playerName.trim()}
+        className="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
       >
         {loading ? "Creating..." : "Create Player"}
       </button>
-      {error && <div className="text-red-600 text-center mt-2">{error}</div>}
-      {success && (
-        <div className="text-green-600 text-center mt-2">Player created!</div>
-      )}
     </form>
   );
 }
