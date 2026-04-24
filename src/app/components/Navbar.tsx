@@ -17,8 +17,8 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
     router.push("/");
+    supabase.auth.signOut();
   };
 
   const handleSignIn = async () => {
