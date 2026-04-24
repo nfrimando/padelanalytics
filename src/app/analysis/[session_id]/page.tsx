@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import React from "react";
@@ -28,6 +28,8 @@ export default function AnalysisPage({
   const [status, setStatus] = useState<Status>("loading");
 
   const isValidUuid = UUID_V4_REGEX.test(session_id ?? "");
+
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     if (!isValidUuid) {

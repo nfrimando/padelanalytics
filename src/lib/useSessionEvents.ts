@@ -1,7 +1,7 @@
 
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export function useSessionEvents(sessionId: string | null) {
   const [events, setEvents] = useState<any[]>([]);
@@ -20,6 +20,7 @@ export function useSessionEvents(sessionId: string | null) {
     const fetchData = async () => {
       setLoading(true);
 
+      const supabase = createSupabaseBrowserClient()
       // Fetch both in parallel
       const [eventsRes, playersRes] = await Promise.all([
         supabase
