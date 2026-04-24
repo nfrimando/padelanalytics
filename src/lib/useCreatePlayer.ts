@@ -36,7 +36,7 @@ export function useCreatePlayer(onSuccess?: () => void) {
     },
   })
 
-  const handleSubmit = async (e?: SubmitEvent) => {
+  const handleSubmit = async (e?: FormEvent<HTMLFormElement>) => {
     if (e) e.preventDefault()
     if (!playerName.trim()) return
 
