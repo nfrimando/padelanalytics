@@ -15,12 +15,13 @@ export type PlayerPosition = 1 | 2 | 3 | 4;
 // ─── Core Domain Types ────────────────────────────────────────────────────────
 
 export interface Player {
-  player_id: number;
-  player_name: string;
-  nickname: string | null;
-  email: string | null;
-  created_at: string;
-  updated_at: string;
+  player_id: number
+  player_name: string
+  nickname: string | null
+  email: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Session {

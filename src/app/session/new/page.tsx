@@ -276,6 +276,16 @@ export default function NewSessionPage() {
       {url && !videoId && (
         <p className="text-red-500 mt-2 text-sm">Invalid YouTube link</p>
       )}
+
+      <p className="text-sm text-zinc-500 mt-2">
+        Player not in the list?{" "}
+        <a
+          href="/players"
+          className="text-indigo-600 hover:underline font-medium"
+        >
+          Create a new player →
+        </a>
+      </p>
     </div>
   );
 }
