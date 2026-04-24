@@ -5,7 +5,6 @@ import { Suspense } from "react";
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const authRequired = searchParams.get("auth_required") === "true";
   const authError = searchParams.get("auth_error") === "true";
 
   return (
@@ -20,11 +19,6 @@ function HomeContent() {
           then review detailed stats and event timelines to improve your game.
         </p>
 
-        {authRequired && (
-          <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-            Please sign in using the button in the top right to continue.
-          </p>
-        )}
         {authError && (
           <p className="text-sm text-red-600 dark:text-red-400 font-medium">
             Something went wrong during sign in. Please try again.

@@ -15,6 +15,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // If something went wrong, send them home — you can improve this later
   return NextResponse.redirect(`${origin}/?auth_error=true`)
 }

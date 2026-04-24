@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware'
 
-const PROTECTED_PATHS = ['/session']
+const PROTECTED_PATHS = ['/session', '/analysis']
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request })
   const supabase = createSupabaseMiddlewareClient(request, response)
 
-  // getUser() also silently refreshes the session token if it's near expiry
   const { data: { user } } = await supabase.auth.getUser()
 
   const isProtected = PROTECTED_PATHS.some(path =>
@@ -15,10 +14,10 @@ export async function middleware(request: NextRequest) {
   )
 
   if (isProtected && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    url.searchParams.set('auth_required', 'true')
-    return NextResponse.redirect(url)
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/auth/login'
+    redirectUrl.searchParams.set('next', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
   return response
