@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware'
 
-const PROTECTED_PATHS = ['/session', '/analysis']
+const PROTECTED_PATHS = [
+    '/session', 
+    // '/analysis'
+]
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request })
@@ -24,5 +27,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/session/:path*', '/analysis/:path*'],
+  matcher: [
+    '/session/:path*', 
+    // '/analysis/:path*'
+],
 }

@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { useAuth } from "@/lib/useAuth";
 
 export default function BackToSessionButton({
   sessionId,
 }: {
   sessionId: string;
 }) {
+  const { user, loading } = useAuth();
+
+  if (loading || !user) return null;
+
   return (
     <Link
       href={`/session/${sessionId}`}
