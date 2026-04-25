@@ -3,7 +3,8 @@ import { queryKeys } from "@/lib/queries/keys";
 import {
   fetchMatchAggregates,
   fetchMatchPlayerEventAggregates,
-  fetchMatchSetsGamesTeamsAggregates
+  fetchMatchSetsGamesTeamsAggregates,
+  fetchSessionPlayersWithNames,
 } from "@/lib/queries/supabase";
 
 // Analytics data is read-only and doesn't change while you're viewing it,
@@ -31,6 +32,15 @@ export function useMatchSetsGamesTeamsAggregates(sessionId: string) {
   return useQuery({
     queryKey: queryKeys.matchSetsGamesTeamsAggregates(sessionId),
     queryFn: () => fetchMatchSetsGamesTeamsAggregates(sessionId),
+    enabled: !!sessionId,
+    staleTime: ANALYTICS_STALE_TIME,
+  });
+}
+
+export function useSessionPlayersWithNames(sessionId: string) {
+  return useQuery({
+    queryKey: queryKeys.sessionPlayersWithNames(sessionId),
+    queryFn: () => fetchSessionPlayersWithNames(sessionId),
     enabled: !!sessionId,
     staleTime: ANALYTICS_STALE_TIME,
   });

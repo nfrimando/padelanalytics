@@ -4,7 +4,8 @@ import type {
   SessionStatus,
   Event, 
   Player, 
-  SessionPlayerOption, 
+  SessionPlayerOption,
+  SessionPlayerWithName,
   PlayerPosition, 
   MatchAggregates, 
   MatchPlayerEventAggregates,
@@ -24,6 +25,30 @@ export async function fetchSession(sessionId: string): Promise<Session> {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function fetchSessionPlayersWithNames(sessionId: string): Promise<SessionPlayerWithName[]> {
+  const { data, error } = await supabase
+    .from("session_players")
+    .select("id, session_id, player_id, position, created_at, players(player_name, nickname)")
+    .eq("session_id", sessionId);
+  if (error) throw error;
+
+  return (data ?? [])
+    .sort((a, b) => a.position - b.position)
+    .map((sp) => {
+      const playerArr = sp.players as { player_name: string; nickname: string | null }[] | null;
+      const player = Array.isArray(playerArr) ? playerArr[0] : playerArr;
+      return {
+        id: sp.id,
+        session_id: sp.session_id,
+        player_id: sp.player_id,
+        position: sp.position as PlayerPosition,
+        created_at: sp.created_at,
+        player_name: player?.player_name ?? null,
+        nickname: player?.nickname ?? null,
+      };
+    });
 }
 
 export async function fetchSessionPlayers(sessionId: string): Promise<SessionPlayerOption[]> {
@@ -104,15 +129,29 @@ export async function deleteEventMutation(id: string): Promise<string> {
 interface FetchSessionsFilters {
   status?: SessionStatus | SessionStatus[];
   owner_id?: string;
-  player_id?: number;
+  player_ids?: number[];
 }
 
 export async function fetchSessions(
   filters: FetchSessionsFilters = { status: "completed" }
 ): Promise<(Session & { owner_email: string | null })[]> {
+  let sessionIds: string[] | null = null;
+
+  // If player_ids filter is set, resolve matching session IDs via RPC first
+  if (filters.player_ids && filters.player_ids.length > 0) {
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "get_sessions_by_players",
+      { player_ids: filters.player_ids }
+    );
+    if (rpcError) throw rpcError;
+    sessionIds = (rpcData ?? []) as string[];
+    // If no sessions match, return early
+    if (sessionIds.length === 0) return [];
+  }
+
   let query = supabase
     .from("sessions")
-    .select("*, profiles(email), session_players!inner(player_id)")
+    .select("*, profiles(email)")
     .order("updated_at", { ascending: false });
 
   if (filters.status) {
@@ -127,15 +166,15 @@ export async function fetchSessions(
     query = query.eq("owner_id", filters.owner_id);
   }
 
-  if (filters.player_id) {
-    query = query.eq("session_players.player_id", filters.player_id);
+  if (sessionIds !== null) {
+    query = query.in("id", sessionIds);
   }
 
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map((s) => {
     const profile = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
-    return { ...s, profiles: undefined, session_players: undefined, owner_email: profile?.email ?? null };
+    return { ...s, profiles: undefined, owner_email: profile?.email ?? null };
   });
 }
 
