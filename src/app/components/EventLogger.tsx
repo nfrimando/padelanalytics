@@ -31,6 +31,47 @@ interface EventLoggerProps {
   onLogSecondsAgo: (seconds: number) => void;
 }
 
+function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+        {label}
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onChange(Math.max(min, value - 1))}
+          disabled={value <= min}
+          className="w-8 h-8 rounded-full border border-zinc-300 dark:border-zinc-600 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-lg leading-none"
+        >
+          −
+        </button>
+        <span className="w-6 text-center font-bold text-zinc-900 dark:text-white text-lg">
+          {value}
+        </span>
+        <button
+          onClick={() => onChange(Math.min(max, value + 1))}
+          disabled={value >= max}
+          className="w-8 h-8 rounded-full border border-zinc-300 dark:border-zinc-600 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-lg leading-none"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function EventLogger({
   players,
   selectedSet,
@@ -52,14 +93,11 @@ export default function EventLogger({
 
   const disabledPositions: PlayerPosition[] =
     selectedPlayer && selectedPointType && selectedPlayerObj
-      ? getDisabledPositionsForEvent(
-          selectedPointType,
-          selectedPlayerObj.position,
-        )
+      ? getDisabledPositionsForEvent(selectedPointType, selectedPlayerObj.position)
       : players.map((p) => p.position);
 
   const allPositionsDisabled = players.every((p) =>
-    disabledPositions.includes(p.position),
+    disabledPositions.includes(p.position)
   );
 
   const isLogEnabled =
@@ -69,53 +107,32 @@ export default function EventLogger({
       (!!involvedPlayer &&
         !disabledPositions.includes(
           players.find((p) => p.id === involvedPlayer)?.position ??
-            (0 as PlayerPosition),
+            (0 as PlayerPosition)
         )));
 
-  return (
-    <div>
-      <h2 className="font-bold mb-4 mt-8">Log Event</h2>
+  if (locked) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-500 dark:text-zinc-400">
+        🔒 This session is completed. Reopen it to log new events.
+      </div>
+    );
+  }
 
-      {locked ? (
-        <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-500 dark:text-zinc-400">
-          🔒 This session is completed. Reopen it to log new events.
-        </div>
-      ) : (
-      <>
-      <div className="flex gap-4 mb-4">
-        <div>
-          <p className="font-semibold mb-2">Set</p>
-          <select
-            className="border rounded px-2 py-1"
-            value={selectedSet}
-            onChange={(e) => onSetChange(Number(e.target.value))}
-          >
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <p className="font-semibold mb-2">Game</p>
-          <select
-            className="border rounded px-2 py-1"
-            value={selectedGame}
-            onChange={(e) => onGameChange(Number(e.target.value))}
-          >
-            {Array.from({ length: 13 }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
+  return (
+    <div className="flex flex-col gap-4">
+
+      {/* Set & Game */}
+      <div className="flex items-center gap-6 px-1">
+        <Stepper label="Set" value={selectedSet} min={1} max={5} onChange={onSetChange} />
+        <div className="w-px h-10 bg-zinc-200 dark:bg-zinc-700" />
+        <Stepper label="Game" value={selectedGame} min={1} max={13} onChange={onGameChange} />
       </div>
 
       {/* Player */}
       <div>
-        <p className="font-semibold mb-2">Player</p>
+        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+          Player
+        </p>
         <SessionPlayerSelector
           players={players}
           selectedPlayer={selectedPlayer}
@@ -124,25 +141,25 @@ export default function EventLogger({
       </div>
 
       {/* Point Type */}
-      <div className="mt-4">
-        <p className="font-semibold mb-2">Point Type</p>
+      <div>
+        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+          Point Type
+        </p>
         <EventSelector
           eventNames={EVENT_TYPES.map((t) => EVENT_TYPE_LABELS[t])}
-          value={
-            selectedPointType ? EVENT_TYPE_LABELS[selectedPointType] : null
-          }
+          value={selectedPointType ? EVENT_TYPE_LABELS[selectedPointType] : null}
           onChange={(val) => {
-            const eventType = EVENT_TYPES.find(
-              (t) => EVENT_TYPE_LABELS[t] === val,
-            );
+            const eventType = EVENT_TYPES.find((t) => EVENT_TYPE_LABELS[t] === val);
             if (eventType) onPointTypeChange(eventType);
           }}
         />
       </div>
 
       {/* Involved Player */}
-      <div className="mt-4">
-        <p className="font-semibold mb-2">Involved Player</p>
+      <div>
+        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+          Involved Player
+        </p>
         <SessionPlayerSelector
           players={players}
           selectedPlayer={involvedPlayer}
@@ -152,30 +169,33 @@ export default function EventLogger({
       </div>
 
       {/* Log Buttons */}
-      <div className="flex gap-4 mt-6">
+      <div className="flex flex-col gap-2 pt-1">
+        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+          Log Event
+        </p>
+        <div className="flex gap-2">
         {[
-          { label: "Log Now", seconds: 0 },
-          { label: "Log 10s ago", seconds: 10 },
-          { label: "Log 15s ago", seconds: 15 },
+          { label: "−15s", seconds: 15 },
+          { label: "−10s", seconds: 10 },
+          { label: "Now", seconds: 0 },
         ].map(({ label, seconds }) => (
           <button
             key={label}
-            onClick={() =>
-              seconds === 0 ? onLogNow() : onLogSecondsAgo(seconds)
-            }
+            onClick={() => (seconds === 0 ? onLogNow() : onLogSecondsAgo(seconds))}
             disabled={!isLogEnabled || isLogging}
-            className={`px-4 py-2 rounded font-semibold transition-colors duration-150 ${
+            className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors duration-150 ${
               isLogEnabled && !isLogging
-                ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
-                : "bg-gray-300 text-gray-400 cursor-not-allowed opacity-60"
+                ? seconds === 10 || seconds === 15
+                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed opacity-50"
             }`}
           >
-            {label}
+            {isLogging ? "..." : label}
           </button>
         ))}
+        </div>
       </div>
-      </>
-      )}
     </div>
   );
 }
