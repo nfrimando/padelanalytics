@@ -12,7 +12,9 @@ import SetGamePointsTable from "@/app/components/SetGamePointsTable";
 import {
   useMatchAggregates,
   useMatchPlayerEventAggregates,
+  useSessionPlayersWithNames,
 } from "@/lib/useAnalytics";
+import PlayerContributionChart from "@/app/components/PlayerContributionChart";
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -64,6 +66,9 @@ export default function AnalysisPage({
   const { data: playerEventAggs, isLoading: playerEventAggsLoading } =
     useMatchPlayerEventAggregates(session_id);
 
+  // Session players with names (for the contribution chart)
+  const { data: sessionPlayers = [] } = useSessionPlayersWithNames(session_id);
+
   // Trigger Next.js 404 during render — works correctly in client components
   if (status === "not_found") notFound();
 
@@ -81,6 +86,16 @@ export default function AnalysisPage({
       <div className="flex justify-end mb-2">
         <BackToSessionButton sessionId={session_id} />
       </div>
+      {/* Player Contribution Chart */}
+      {sessionPlayers.length > 0 && (
+        <div className="mb-6">
+          <PlayerContributionChart
+            sessionId={session_id}
+            players={sessionPlayers}
+          />
+        </div>
+      )}
+
       {/* Match Aggregates */}
       {aggregatesLoading ? (
         <div className="mt-8 flex items-center gap-2 justify-center">
