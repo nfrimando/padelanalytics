@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/queries/keys";
-import { fetchSessions } from "@/lib/queries/supabase";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useSessions } from "@/lib/useSessions";
+import { usePlayers } from "@/lib/usePlayers";
 import { useAuth } from "@/lib/useAuth";
 import Spinner from "@/app/components/Spinner";
 import Link from "next/link";
@@ -24,23 +24,57 @@ function formatDate(iso: string) {
 
 export default function AnalysesPage() {
   const { user } = useAuth();
+  const { players } = usePlayers();
+  const searchParams = useSearchParams();
+
   const [selectedStatuses, setSelectedStatuses] = useState<SessionStatus[]>(["completed"]);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | undefined>(undefined);
+  const [playerDropdownOpen, setPlayerDropdownOpen] = useState(false);
+
+  const { sessions, isLoading } = useSessions({
+    status: selectedStatuses,
+    player_id: selectedPlayerId,
+  });
+
+  useEffect(() => {
+    const playerParam = searchParams.get("player");
+    if (playerParam) {
+      const id = parseInt(playerParam, 10);
+      if (!isNaN(id)) setSelectedPlayerId(id);
+    }
+  }, [searchParams]);
 
   function toggleStatus(status: SessionStatus) {
     setSelectedStatuses((prev) =>
       prev.includes(status)
         ? prev.length === 1
-          ? prev // always keep at least one selected
+          ? prev
           : prev.filter((s) => s !== status)
         : [...prev, status]
     );
   }
 
-  const filters = { status: selectedStatuses };
-  const { data: sessions = [], isLoading } = useQuery({
-    queryKey: queryKeys.sessions(filters),
-    queryFn: () => fetchSessions(filters),
-  });
+  const filteredPlayers = playerSearch
+    ? players.filter((p) =>
+        p.player_name?.toLowerCase().includes(playerSearch.toLowerCase()) ||
+        p.nickname?.toLowerCase().includes(playerSearch.toLowerCase())
+      )
+    : players;
+
+  const selectedPlayer = players.find((p) => p.player_id === selectedPlayerId);
+
+  function handlePlayerSelect(playerId: number) {
+    setSelectedPlayerId(playerId);
+    setPlayerSearch("");
+    setPlayerDropdownOpen(false);
+  }
+
+  function handlePlayerClear() {
+    setSelectedPlayerId(undefined);
+    setPlayerSearch("");
+    setPlayerDropdownOpen(false);
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -61,24 +95,83 @@ export default function AnalysesPage() {
         </Link>
       </div>
 
-      {/* Status filter pills */}
-      <div className="flex items-center gap-2 mb-6">
-        {STATUSES.map(({ value, label }) => {
-          const active = selectedStatuses.includes(value);
-          return (
-            <button
-              key={value}
-              onClick={() => toggleStatus(value)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                active
-                  ? "bg-indigo-600 border-indigo-600 text-white"
-                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-indigo-300"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+
+        {/* Status pills */}
+        <div className="flex items-center gap-2">
+          {STATUSES.map(({ value, label }) => {
+            const active = selectedStatuses.includes(value);
+            return (
+              <button
+                key={value}
+                onClick={() => toggleStatus(value)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  active
+                    ? "bg-indigo-600 border-indigo-600 text-white"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-indigo-300"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+
+        {/* Player search */}
+        <div className="relative">
+          {selectedPlayer ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-full text-sm text-indigo-700 dark:text-indigo-300">
+              <span className="font-medium">
+                {selectedPlayer.nickname ?? selectedPlayer.player_name}
+              </span>
+              <button
+                onClick={handlePlayerClear}
+                className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200 leading-none"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={playerSearch}
+              onChange={(e) => {
+                setPlayerSearch(e.target.value);
+                setPlayerDropdownOpen(true);
+              }}
+              onFocus={() => setPlayerDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setPlayerDropdownOpen(false), 150)}
+              placeholder="Filter by player..."
+              className="px-3 py-1.5 text-sm border border-zinc-200 dark:border-zinc-700 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 focus:outline-none focus:border-indigo-400 w-44"
+            />
+          )}
+
+          {playerDropdownOpen && !selectedPlayer && filteredPlayers.length > 0 && (
+            <ul className="absolute z-50 mt-1 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+              {filteredPlayers.map((player) => (
+                <li
+                  key={player.player_id}
+                  onMouseDown={() => handlePlayerSelect(player.player_id)}
+                  className="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300"
+                >
+                  <span className="font-medium">
+                    {player.nickname ?? player.player_name}
+                  </span>
+                  {player.nickname && (
+                    <span className="ml-1.5 text-zinc-400 text-xs">
+                      {player.player_name}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
       </div>
 
       {isLoading ? (
@@ -89,7 +182,7 @@ export default function AnalysesPage() {
       ) : sessions.length === 0 ? (
         <div className="text-center py-20 text-zinc-400">
           <p className="text-lg font-medium mb-1">No matches found</p>
-          <p className="text-sm">Try selecting a different filter above.</p>
+          <p className="text-sm">Try adjusting the filters above.</p>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">

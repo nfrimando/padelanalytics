@@ -19,6 +19,7 @@ export interface Player {
   player_name: string
   nickname: string | null
   email: string | null
+  image_url: string | null
   created_by: string | null
   created_at: string
   updated_at: string
