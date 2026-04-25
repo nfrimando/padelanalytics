@@ -104,7 +104,7 @@ export default function AnalysisPage({
 
       {/* Player Event Breakdown */}
       <div className="bg-white dark:bg-zinc-900 rounded-xl shadow p-6 border border-zinc-100 dark:border-zinc-800">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
               Player Event Breakdown
@@ -115,15 +115,15 @@ export default function AnalysisPage({
           </div>
           <div className="flex items-center gap-3">
             {/* Point count */}
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-zinc-400 shrink-0">
               {(selectedSet ? events.filter((e) => e.set_number === selectedSet) : events).length} points
             </span>
             {/* Set filter */}
             {sets.length > 1 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
                 <button
                   onClick={() => setSelectedSet(undefined)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors shrink-0 ${
                     selectedSet === undefined
                       ? "bg-indigo-600 border-indigo-600 text-white"
                       : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-300"
@@ -135,7 +135,7 @@ export default function AnalysisPage({
                   <button
                     key={s.setNumber}
                     onClick={() => setSelectedSet(s.setNumber)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors shrink-0 ${
                       selectedSet === s.setNumber
                         ? "bg-indigo-600 border-indigo-600 text-white"
                         : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-300"
