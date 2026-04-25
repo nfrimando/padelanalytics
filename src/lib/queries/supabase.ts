@@ -104,6 +104,7 @@ export async function deleteEventMutation(id: string): Promise<string> {
 interface FetchSessionsFilters {
   status?: SessionStatus | SessionStatus[];
   owner_id?: string;
+  player_id?: number;
 }
 
 export async function fetchSessions(
@@ -111,7 +112,7 @@ export async function fetchSessions(
 ): Promise<(Session & { owner_email: string | null })[]> {
   let query = supabase
     .from("sessions")
-    .select("*, profiles(email)")
+    .select("*, profiles(email), session_players!inner(player_id)")
     .order("updated_at", { ascending: false });
 
   if (filters.status) {
@@ -126,11 +127,15 @@ export async function fetchSessions(
     query = query.eq("owner_id", filters.owner_id);
   }
 
+  if (filters.player_id) {
+    query = query.eq("session_players.player_id", filters.player_id);
+  }
+
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map((s) => {
     const profile = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
-    return { ...s, profiles: undefined, owner_email: profile?.email ?? null };
+    return { ...s, profiles: undefined, session_players: undefined, owner_email: profile?.email ?? null };
   });
 }
 

@@ -14,6 +14,8 @@ export default function PlayerCreate({ onSuccess }: PlayerCreateProps) {
     setNickname,
     email,
     setEmail,
+    imageUrl,
+    setImageUrl,
     loading,
     error,
     handleSubmit,
@@ -61,6 +63,28 @@ export default function PlayerCreate({ onSuccess }: PlayerCreateProps) {
           placeholder="e.g. nigel@email.com"
           disabled={loading}
         />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Photo URL <span className="text-zinc-400 font-normal">(optional)</span>
+        </label>
+        <input
+          className="border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          type="url"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://..."
+          disabled={loading}
+        />
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt="Preview"
+            className="mt-1 w-12 h-12 rounded-full object-cover border border-zinc-200"
+            onError={(e) => (e.currentTarget.style.display = "none")}
+          />
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

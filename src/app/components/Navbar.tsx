@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/useAuth";
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/analyses", label: "Analyses" },
-  { href: "/session/new", label: "New Session" },
   { href: "/players", label: "Players" },
 ];
 
@@ -45,22 +44,21 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden sm:flex items-center gap-4">
-          {NAV_LINKS.map(({ href, label }) => {
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`text-sm font-medium transition-colors ${
-                  isActive
-                    ? "text-indigo-700 dark:text-indigo-300"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
+          {NAV_LINKS.map(({ href, label }) => (
+  <Link
+    key={href}
+    href={href}
+    className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+  >
+    {label}
+  </Link>
+))}
+<Link
+  href="/session/new"
+  className="text-sm font-semibold px-4 py-1.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors"
+>
+  Start New Analysis
+</Link>
         </div>
       </div>
 

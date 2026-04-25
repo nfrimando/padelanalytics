@@ -7,6 +7,7 @@ async function createPlayerMutation(params: {
   player_name: string
   nickname: string | null
   email: string | null
+  image_url: string | null
   created_by: string | null
 }) {
   const supabase = createSupabaseBrowserClient()
@@ -24,6 +25,7 @@ export function useCreatePlayer(onSuccess?: () => void) {
   const [playerName, setPlayerName] = useState('')
   const [nickname, setNickname] = useState('')
   const [email, setEmail] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
 
   const mutation = useMutation({
     mutationFn: createPlayerMutation,
@@ -32,6 +34,7 @@ export function useCreatePlayer(onSuccess?: () => void) {
       setPlayerName('')
       setNickname('')
       setEmail('')
+      setImageUrl('')
       onSuccess?.()
     },
   })
@@ -47,6 +50,7 @@ export function useCreatePlayer(onSuccess?: () => void) {
       player_name: playerName.trim(),
       nickname: nickname.trim() || null,
       email: email.trim() || null,
+      image_url: imageUrl.trim() || null,
       created_by: user?.email ?? null,
     })
   }
@@ -58,6 +62,8 @@ export function useCreatePlayer(onSuccess?: () => void) {
     setNickname,
     email,
     setEmail,
+    imageUrl,
+    setImageUrl,
     loading: mutation.isPending,
     error: mutation.error?.message ?? null,
     handleSubmit,
