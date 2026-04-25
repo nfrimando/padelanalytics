@@ -8,10 +8,12 @@ import { useSession } from "@/lib/useSession";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { useCreateEvent } from "@/lib/useCreateEvent";
 import { getPartnerPlayerId } from "@/lib/utils/session";
+import { useAuth } from "@/lib/useAuth";
 
 import VideoPlayer from "@/app/components/VideoPlayer";
 import EventLogger from "@/app/components/EventLogger";
 import EventsTable from "@/app/components/EventsTable";
+import LockSessionButton from "@/app/components/LockSessionButton";
 
 import type { EventType } from "@/lib/utils/types";
 
@@ -40,6 +42,9 @@ export default function SessionPage({
   // FIX 4: useSession now returns a React Query object directly
   const { data: session, error: sessionError } = useSession(sessionId);
   const { sessionPlayers } = useSessionPlayers(sessionId);
+  const { user } = useAuth();
+
+  const isOwner = !!user && !!session && session.owner_id === user.id;
 
   // FIX 1: only one declaration of useCreateEvent, with sessionId
   const { createEvent, loading: isLogging } = useCreateEvent(sessionId);
@@ -123,6 +128,15 @@ export default function SessionPage({
       >
         Analytics
       </a>
+      {session && (
+        <div className="absolute right-0 top-0 mt-4 mr-36 z-20">
+          <LockSessionButton
+            sessionId={sessionId}
+            status={session.status}
+            isOwner={isOwner}
+          />
+        </div>
+      )}
 
       {/* LEFT: Video */}
       {session?.youtube_video_id && (

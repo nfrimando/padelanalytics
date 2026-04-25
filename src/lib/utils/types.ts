@@ -30,6 +30,7 @@ export interface Session {
   youtube_video_id: string;
   title: string | null;
   status: SessionStatus;
+  owner_id: string | null;
   created_at: string;
   updated_at: string;
 }

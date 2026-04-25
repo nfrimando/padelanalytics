@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/useAuth";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
+  { href: "/analyses", label: "Analyses" },
   { href: "/session/new", label: "New Session" },
   { href: "/players", label: "Players" },
 ];

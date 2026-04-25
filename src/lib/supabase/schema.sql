@@ -24,7 +24,17 @@ CREATE TABLE public.players (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   nickname text,
-  CONSTRAINT players_pkey PRIMARY KEY (player_id)
+  created_by text,
+  CONSTRAINT players_pkey PRIMARY KEY (player_id),
+  CONSTRAINT players_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(email)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  email text UNIQUE,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.session_players (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
