@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSessions } from "@/lib/useSessions";
 import { usePlayers } from "@/lib/usePlayers";
@@ -22,7 +22,7 @@ function formatDate(iso: string) {
   });
 }
 
-export default function AnalysesPage() {
+function AnalysesContent() {
   const { user } = useAuth();
   const { players } = usePlayers();
   const searchParams = useSearchParams();
@@ -32,11 +32,6 @@ export default function AnalysesPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | undefined>(undefined);
   const [playerDropdownOpen, setPlayerDropdownOpen] = useState(false);
 
-  const { sessions, isLoading } = useSessions({
-    status: selectedStatuses,
-    player_id: selectedPlayerId,
-  });
-
   useEffect(() => {
     const playerParam = searchParams.get("player");
     if (playerParam) {
@@ -44,6 +39,11 @@ export default function AnalysesPage() {
       if (!isNaN(id)) setSelectedPlayerId(id);
     }
   }, [searchParams]);
+
+  const { sessions, isLoading } = useSessions({
+    status: selectedStatuses,
+    player_id: selectedPlayerId,
+  });
 
   function toggleStatus(status: SessionStatus) {
     setSelectedStatuses((prev) =>
@@ -227,5 +227,13 @@ export default function AnalysesPage() {
         </ul>
       )}
     </div>
+  );
+}
+
+export default function AnalysesPage() {
+  return (
+    <Suspense>
+      <AnalysesContent />
+    </Suspense>
   );
 }
