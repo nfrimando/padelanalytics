@@ -6,7 +6,6 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useAuth } from "@/lib/useAuth";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
   { href: "/analyses", label: "Analyses" },
   { href: "/players", label: "Players" },
 ];
