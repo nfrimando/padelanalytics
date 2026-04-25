@@ -218,10 +218,12 @@ export async function fetchMatchAggregates(
 }
 
 export async function fetchMatchPlayerEventAggregates(
-  sessionId: string
+  sessionId: string,
+  setNumber?: number
 ): Promise<MatchPlayerEventAggregates[]> {
   const { data, error } = await supabase.rpc("get_match_players_events_aggregates", {
     session_id: sessionId,
+    filter_set_number: setNumber ?? null,
   });
   if (error) throw error;
   return data as MatchPlayerEventAggregates[];
