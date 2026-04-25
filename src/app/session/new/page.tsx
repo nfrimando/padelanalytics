@@ -56,6 +56,7 @@ export default function NewSessionPage() {
     setError(null);
     try {
       const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.rpc(
         "create_session_with_players",
         {
@@ -63,6 +64,7 @@ export default function NewSessionPage() {
           youtube_video_id: videoId,
           title: videoTitle || null,
           player_ids: selectedPlayers,
+          owner_id: user?.id ?? null,
         },
       );
       setLoading(false);

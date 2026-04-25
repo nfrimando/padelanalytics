@@ -1,6 +1,7 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { 
-  Session, 
+  Session,
+  SessionStatus,
   Event, 
   Player, 
   SessionPlayerOption, 
@@ -100,7 +101,38 @@ export async function deleteEventMutation(id: string): Promise<string> {
   return id; // return the id so we know what to remove from the cache
 }
 
-// RPC Analytics ------------------------------------
+interface FetchSessionsFilters {
+  status?: SessionStatus | SessionStatus[];
+  owner_id?: string;
+}
+
+export async function fetchSessions(
+  filters: FetchSessionsFilters = { status: "completed" }
+): Promise<(Session & { owner_email: string | null })[]> {
+  let query = supabase
+    .from("sessions")
+    .select("*, profiles(email)")
+    .order("updated_at", { ascending: false });
+
+  if (filters.status) {
+    if (Array.isArray(filters.status)) {
+      query = query.in("status", filters.status);
+    } else {
+      query = query.eq("status", filters.status);
+    }
+  }
+
+  if (filters.owner_id) {
+    query = query.eq("owner_id", filters.owner_id);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((s) => {
+    const profile = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
+    return { ...s, profiles: undefined, owner_email: profile?.email ?? null };
+  });
+}
 
 export async function fetchMatchAggregates(
   sessionId: string
