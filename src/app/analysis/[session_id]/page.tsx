@@ -49,10 +49,12 @@ export default function AnalysisPage({
     return () => { cancelled = true; };
   }, [session_id, isValidUuid]);
 
+  const [selectedSet, setSelectedSet] = useState<number | undefined>(undefined);
+
   // ─── Data fetching ────────────────────────────────────────────────────────
   const { data: aggregates } = useMatchAggregates(session_id);
   const { data: setsData = [] } = useMatchSetsGamesTeamsAggregates(session_id);
-  const { data: playerEventAggs, isLoading: playerEventAggsLoading } = useMatchPlayerEventAggregates(session_id);
+  const { data: playerEventAggs, isLoading: playerEventAggsLoading, isFetching: playerEventAggsFetching } = useMatchPlayerEventAggregates(session_id, selectedSet);
   const { data: sessionPlayers = [] } = useSessionPlayersWithNames(session_id);
   const { data: events = [] } = useQuery({
     queryKey: queryKeys.sessionEvents(session_id),
@@ -91,16 +93,59 @@ export default function AnalysisPage({
 
       {/* Player Event Breakdown */}
       <div className="bg-white dark:bg-zinc-900 rounded-xl shadow p-6 border border-zinc-100 dark:border-zinc-800">
-        <h2 className="text-lg font-bold mb-4 text-zinc-900 dark:text-white">
-          Player Event Breakdown
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
+              Player Event Breakdown
+            </h2>
+            {playerEventAggsFetching && !playerEventAggsLoading && (
+              <Spinner size="sm" />
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Point count */}
+            <span className="text-xs text-zinc-400">
+              {(selectedSet ? events.filter((e) => e.set_number === selectedSet) : events).length} points
+            </span>
+            {/* Set filter */}
+            {sets.length > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedSet(undefined)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    selectedSet === undefined
+                      ? "bg-indigo-600 border-indigo-600 text-white"
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-300"
+                  }`}
+                >
+                  All sets
+                </button>
+                {sets.map((s) => (
+                  <button
+                    key={s.setNumber}
+                    onClick={() => setSelectedSet(s.setNumber)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      selectedSet === s.setNumber
+                        ? "bg-indigo-600 border-indigo-600 text-white"
+                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-300"
+                    }`}
+                  >
+                    Set {s.setNumber}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         {playerEventAggsLoading ? (
           <div className="flex items-center gap-2 justify-center">
             <Spinner size="md" />
             <span className="text-zinc-500">Loading player event data...</span>
           </div>
         ) : (
-          <PlayerEventBreakdown data={playerEventAggs ?? []} sessionPlayers={sessionPlayers} events={events} />
+          <div className={playerEventAggsFetching ? "opacity-50 transition-opacity" : "transition-opacity"}>
+            <PlayerEventBreakdown data={playerEventAggs ?? []} sessionPlayers={sessionPlayers} events={selectedSet ? events.filter((e) => e.set_number === selectedSet) : events} />
+          </div>
         )}
       </div>
     </div>

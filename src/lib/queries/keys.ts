@@ -8,6 +8,6 @@ export const queryKeys = {
 
 // Analytics — scoped under "analytics" so they're easy to invalidate together
   matchAggregates: (sessionId: string) => ["analytics", "matchAggregates", sessionId] as const,
-  matchPlayerEventAggregates: (sessionId: string) => ["analytics", "matchPlayerEventAggregates", sessionId] as const,
+  matchPlayerEventAggregates: (sessionId: string, setNumber?: number) => ["analytics", "matchPlayerEventAggregates", sessionId, setNumber ?? "all"] as const,
   matchSetsGamesTeamsAggregates: (sessionId: string) => ["analytics", "matchSetGamesTeamAggregates", sessionId] as const,
 };

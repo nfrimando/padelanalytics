@@ -20,12 +20,13 @@ export function useMatchAggregates(sessionId: string) {
     staleTime: ANALYTICS_STALE_TIME,
   });
 }
-export function useMatchPlayerEventAggregates(sessionId: string) {
+export function useMatchPlayerEventAggregates(sessionId: string, setNumber?: number) {
   return useQuery({
-    queryKey: queryKeys.matchPlayerEventAggregates(sessionId),
-    queryFn: () => fetchMatchPlayerEventAggregates(sessionId),
+    queryKey: queryKeys.matchPlayerEventAggregates(sessionId, setNumber),
+    queryFn: () => fetchMatchPlayerEventAggregates(sessionId, setNumber),
     enabled: !!sessionId,
     staleTime: ANALYTICS_STALE_TIME,
+    placeholderData: (previousData) => previousData,
   });
 }
 export function useMatchSetsGamesTeamsAggregates(sessionId: string) {
