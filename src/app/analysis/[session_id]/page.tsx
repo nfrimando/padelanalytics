@@ -32,6 +32,7 @@ export default function AnalysisPage({
 }) {
   const { session_id } = React.use(params);
   const [status, setStatus] = useState<Status>("loading");
+  const [sessionStatus, setSessionStatus] = useState<string | null>(null);
 
   const isValidUuid = UUID_V4_REGEX.test(session_id ?? "");
   const supabase = createSupabaseBrowserClient();
@@ -41,9 +42,11 @@ export default function AnalysisPage({
     let cancelled = false;
     const fetchSession = async () => {
       const { data, error } = await supabase
-        .from("sessions").select("id").eq("id", session_id).single();
+        .from("sessions").select("id, status").eq("id", session_id).single();
       if (cancelled) return;
-      setStatus(error || !data ? "not_found" : "found");
+      if (error || !data) { setStatus("not_found"); return; }
+      setStatus("found");
+      setSessionStatus(data.status);
     };
     fetchSession();
     return () => { cancelled = true; };
@@ -73,6 +76,14 @@ export default function AnalysisPage({
       <div className="flex justify-end mb-4">
         <BackToSessionButton sessionId={session_id} />
       </div>
+
+      {/* Live session banner */}
+      {sessionStatus && sessionStatus !== "completed" && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-sm text-amber-700 dark:text-amber-400">
+          <span>⚠️</span>
+          <span>This analysis is still <span className="font-semibold">in progress</span> — data may be incomplete. The owner can mark it as complete from the session page.</span>
+        </div>
+      )}
 
       {/* Match summary */}
       <MatchSummaryCard
