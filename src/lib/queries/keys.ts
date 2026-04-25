@@ -4,7 +4,7 @@ export const queryKeys = {
   sessionPlayersWithNames: (sessionId: string) => ["sessionPlayersWithNames", sessionId] as const,
   sessionEvents: (sessionId: string) => ["sessionEvents", sessionId] as const,
   players: () => ["players"] as const,
-  sessions: (filters: Record<string, unknown> = {}) => ["sessions", filters] as const,
+  sessions: (filters?: object) => ["sessions", filters] as const,
 
 // Analytics — scoped under "analytics" so they're easy to invalidate together
   matchAggregates: (sessionId: string) => ["analytics", "matchAggregates", sessionId] as const,
