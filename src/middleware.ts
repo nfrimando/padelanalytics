@@ -4,7 +4,7 @@ import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware'
 const PROTECTED_PATHS = [
     '/session', 
     '/players',
-    '/analyses',
+    // '/analyses',
     // '/analysis'
 ]
 
@@ -32,8 +32,8 @@ export const config = {
   matcher: [
     '/session/:path*', 
     '/players/:path*',
-    '/analyses',
-    '/analyses/:path*',
+    // '/analyses',
+    // '/analyses/:path*',
     // '/analysis/:path*'
 ],
 }

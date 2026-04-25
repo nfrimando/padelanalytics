@@ -5,7 +5,7 @@ import { usePlayers } from "@/lib/usePlayers";
 import type { Player } from "@/lib/utils/types";
 import { useRouter } from "next/navigation";
 import Spinner from "@/app/components/Spinner";
-import PlayerCombobox from "@/app/components/PlayerComboBox";
+import PlayerDetailsBox from "@/app/components/PlayerDetailsBox";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 function extractVideoId(url: string) {
@@ -155,28 +155,28 @@ export default function NewSessionPage() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {/* Team 1: left column, Team 2: right column */}
-          <PlayerCombobox
+          <PlayerDetailsBox
             players={sortedPlayers}
             value={selectedPlayers[0]}
             onChange={(id) => handlePlayerSelect(0, id)}
             placeholder={playersLoading ? "Loading..." : "Select Player 1"}
             disabled={!videoId || playersLoading}
           />
-          <PlayerCombobox
+          <PlayerDetailsBox
             players={sortedPlayers}
             value={selectedPlayers[2]}
             onChange={(id) => handlePlayerSelect(2, id)}
             placeholder={playersLoading ? "Loading..." : "Select Player 3"}
             disabled={!videoId || playersLoading}
           />
-          <PlayerCombobox
+          <PlayerDetailsBox
             players={sortedPlayers}
             value={selectedPlayers[1]}
             onChange={(id) => handlePlayerSelect(1, id)}
             placeholder={playersLoading ? "Loading..." : "Select Player 2"}
             disabled={!videoId || playersLoading}
           />
-          <PlayerCombobox
+          <PlayerDetailsBox
             players={sortedPlayers}
             value={selectedPlayers[3]}
             onChange={(id) => handlePlayerSelect(3, id)}

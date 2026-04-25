@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Player } from "@/lib/utils/types";
 
-interface PlayerComboboxProps {
+interface PlayerDetailsBoxProps {
   players: Player[];
   value: number | null;
   onChange: (playerId: number) => void;
@@ -26,13 +26,13 @@ function matchesSearch(player: Player, query: string) {
   );
 }
 
-export default function PlayerCombobox({
+export default function PlayerDetailsBox({
   players,
   value,
   onChange,
   placeholder = "Search player...",
   disabled = false,
-}: PlayerComboboxProps) {
+}: PlayerDetailsBoxProps) {
   const selected = players.find((p) => p.player_id === value) ?? null;
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
