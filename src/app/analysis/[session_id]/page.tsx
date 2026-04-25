@@ -54,7 +54,7 @@ export default function AnalysisPage({
   // ─── Data fetching ────────────────────────────────────────────────────────
   const { data: aggregates } = useMatchAggregates(session_id);
   const { data: setsData = [] } = useMatchSetsGamesTeamsAggregates(session_id);
-  const { data: playerEventAggs, isLoading: playerEventAggsLoading } = useMatchPlayerEventAggregates(session_id, selectedSet);
+  const { data: playerEventAggs, isLoading: playerEventAggsLoading, isFetching: playerEventAggsFetching } = useMatchPlayerEventAggregates(session_id, selectedSet);
   const { data: sessionPlayers = [] } = useSessionPlayersWithNames(session_id);
   const { data: events = [] } = useQuery({
     queryKey: queryKeys.sessionEvents(session_id),
@@ -94,9 +94,14 @@ export default function AnalysisPage({
       {/* Player Event Breakdown */}
       <div className="bg-white dark:bg-zinc-900 rounded-xl shadow p-6 border border-zinc-100 dark:border-zinc-800">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
-            Player Event Breakdown
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
+              Player Event Breakdown
+            </h2>
+            {playerEventAggsFetching && !playerEventAggsLoading && (
+              <Spinner size="sm" />
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {/* Point count */}
             <span className="text-xs text-zinc-400">
@@ -138,7 +143,9 @@ export default function AnalysisPage({
             <span className="text-zinc-500">Loading player event data...</span>
           </div>
         ) : (
-          <PlayerEventBreakdown data={playerEventAggs ?? []} sessionPlayers={sessionPlayers} events={selectedSet ? events.filter((e) => e.set_number === selectedSet) : events} />
+          <div className={playerEventAggsFetching ? "opacity-50 transition-opacity" : "transition-opacity"}>
+            <PlayerEventBreakdown data={playerEventAggs ?? []} sessionPlayers={sessionPlayers} events={selectedSet ? events.filter((e) => e.set_number === selectedSet) : events} />
+          </div>
         )}
       </div>
     </div>

@@ -26,6 +26,7 @@ export function useMatchPlayerEventAggregates(sessionId: string, setNumber?: num
     queryFn: () => fetchMatchPlayerEventAggregates(sessionId, setNumber),
     enabled: !!sessionId,
     staleTime: ANALYTICS_STALE_TIME,
+    placeholderData: (previousData) => previousData,
   });
 }
 export function useMatchSetsGamesTeamsAggregates(sessionId: string) {

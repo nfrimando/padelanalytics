@@ -171,104 +171,186 @@ export default function PlayerEventBreakdown({ data, sessionPlayers, events }: P
         {/* ── Summary rows ── */}
         <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
 
-          {/* Win / Error Ratio */}
-          <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-            <td className="py-2 px-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Win / Error Ratio</span>
-                <InfoTooltip text="Win Contribution % divided by Error %. Higher is better." />
-              </div>
-            </td>
-            {players.map((p) => {
+          {/* Win / Error Ratio — number line */}
+          {(() => {
+            // Collect all finite ratios to determine scale
+            const ratios = players.map((p) => {
               const winPct = totalPoints > 0 ? totalWins[p.player_id] / totalPoints : 0;
               const errPct = totalPoints > 0 ? totalErrors[p.player_id] / totalPoints : 0;
-              const ratio = parseFloat(formatRatio(winPct, errPct));
-              const isGood = !isNaN(ratio) && ratio >= 1;
-              return (
-                <td key={p.player_id} className="py-2 px-3 text-center">
-                  <span className={`font-bold text-sm ${isGood ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
-                    {formatRatio(winPct, errPct)}
-                  </span>
-                </td>
-              );
-            })}
-          </tr>
+              return errPct === 0 ? null : round2(winPct / errPct);
+            });
+            // Scale: centre at 1.0, extend to max distance from 1.0
+            const finiteRatios = ratios.filter((r): r is number => r !== null);
+            const maxDist = finiteRatios.length > 0
+              ? Math.max(...finiteRatios.map((r) => Math.abs(r - 1.0)), 0.5)
+              : 1.0;
+            const min = 1.0 - maxDist;
+            const max = 1.0 + maxDist;
 
-          {/* Win Contribution % */}
-          <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-            <td className="py-2 px-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Win Contribution %</span>
-                <InfoTooltip text="% of rallies where player contributed to winning the point" />
-                {totalPoints > 0 && (
-                  <button onClick={() => setWinExpanded((v) => !v)} className="text-[10px] text-zinc-400 hover:text-indigo-500 transition-colors">
-                    {winExpanded ? "▴ hide" : "▾ breakdown"}
-                  </button>
-                )}
-              </div>
-            </td>
-            {players.map((p) => {
-              const pct = totalPoints > 0 ? totalWins[p.player_id] / totalPoints : 0;
-              return (
-                <td key={p.player_id} className="py-2 px-3 text-center">
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {totalPoints > 0 ? formatPct(pct) : "—"}
-                  </span>
-                </td>
-              );
-            })}
-          </tr>
-          {winExpanded && WIN_COMPONENTS.map((wc) => (
-            <tr key={wc.key} className="bg-zinc-50 dark:bg-zinc-800/30">
-              <td className="py-1.5 px-3 pl-6 text-xs text-zinc-400 italic">{wc.label}</td>
-              {players.map((p) => {
-                const pct = totalPoints > 0 ? winCounts[wc.key][p.player_id] / totalPoints : 0;
-                return (
-                  <td key={p.player_id} className="py-1.5 px-3 text-center text-xs text-zinc-400">
-                    {totalPoints > 0 ? formatPct(pct) : "—"}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+            function toPercent(value: number) {
+              return ((value - min) / (max - min)) * 100;
+            }
 
-          {/* Error % */}
-          <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-            <td className="py-2 px-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Error %</span>
-                <InfoTooltip text="% of rallies where player contributed to losing the point" />
-                {totalPoints > 0 && (
-                  <button onClick={() => setErrorExpanded((v) => !v)} className="text-[10px] text-zinc-400 hover:text-indigo-500 transition-colors">
-                    {errorExpanded ? "▴ hide" : "▾ breakdown"}
-                  </button>
-                )}
-              </div>
-            </td>
-            {players.map((p) => {
-              const pct = totalPoints > 0 ? totalErrors[p.player_id] / totalPoints : 0;
-              return (
-                <td key={p.player_id} className="py-2 px-3 text-center">
-                  <span className="font-semibold text-red-500 dark:text-red-400">
-                    {totalPoints > 0 ? formatPct(pct) : "—"}
-                  </span>
+            const midPct = toPercent(1.0);
+
+            return (
+              <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                <td className="py-2 px-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Win / Error Ratio</span>
+                    <InfoTooltip text="Win Contribution % ÷ Error %. Dot to the right of centre (1.0) means more wins than errors." />
+                  </div>
                 </td>
-              );
-            })}
-          </tr>
-          {errorExpanded && ERROR_COMPONENTS.map((ec) => (
-            <tr key={ec.key} className="bg-zinc-50 dark:bg-zinc-800/30">
-              <td className="py-1.5 px-3 pl-6 text-xs text-zinc-400 italic">{ec.label}</td>
-              {players.map((p) => {
-                const pct = totalPoints > 0 ? errorCounts[ec.key][p.player_id] / totalPoints : 0;
-                return (
-                  <td key={p.player_id} className="py-1.5 px-3 text-center text-xs text-zinc-400">
-                    {totalPoints > 0 ? formatPct(pct) : "—"}
+                {players.map((p, i) => {
+                  const winPct = totalPoints > 0 ? totalWins[p.player_id] / totalPoints : 0;
+                  const errPct = totalPoints > 0 ? totalErrors[p.player_id] / totalPoints : 0;
+                  const ratio = errPct === 0
+                    ? (winPct > 0 ? Infinity : null)
+                    : round2(winPct / errPct);
+                  const dotPct = ratio === null
+                    ? null
+                    : ratio === Infinity
+                      ? 100
+                      : toPercent(Math.min(Math.max(ratio, min), max));
+                  const isGood = ratio !== null && ratio >= 1.0;
+
+                  return (
+                    <td key={p.player_id} className="py-3 px-3">
+                      {totalPoints === 0 || ratio === null ? (
+                        <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {/* Number line */}
+                          <div className="relative h-4 flex items-center">
+                            {/* Track */}
+                            <div className="absolute inset-x-0 h-px bg-zinc-200 dark:bg-zinc-700" />
+                            {/* Centre tick at 1.0 */}
+                            <div
+                              className="absolute w-px h-3 bg-zinc-400 dark:bg-zinc-500"
+                              style={{ left: `${midPct}%` }}
+                            />
+                            {/* Dot */}
+                            <div
+                              className={`absolute w-3 h-3 rounded-full border-2 border-white dark:border-zinc-900 transition-all duration-300 ${isGood ? "bg-emerald-500" : "bg-red-400"}`}
+                              style={{ left: `calc(${dotPct}% - 6px)` }}
+                            />
+                          </div>
+                          {/* Labels */}
+                          <div className="flex justify-between text-[9px] text-zinc-400">
+                            <span>{round2(min).toFixed(1)}</span>
+                            <span className={`font-semibold text-xs ${isGood ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                              {ratio === Infinity ? "∞" : ratio.toFixed(2)}
+                            </span>
+                            <span>{ratio === Infinity ? "∞" : round2(max).toFixed(1)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })()}
+
+          {/* Win Contribution % & Error % — combined bar row */}
+          {(() => {
+            const maxPct = Math.max(
+              ...players.map((p) => Math.max(
+                totalPoints > 0 ? totalWins[p.player_id] / totalPoints : 0,
+                totalPoints > 0 ? totalErrors[p.player_id] / totalPoints : 0,
+              ))
+            );
+
+            return (
+              <>
+                <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                  <td className="py-2 px-3">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Win / Error</span>
+                        <InfoTooltip text="Green: Win Contribution % — % of rallies contributing to winning. Red: Error % — % of rallies contributing to losing. Bars scaled to highest value across players." />
+                        {totalPoints > 0 && (
+                          <button onClick={() => { setWinExpanded((v) => !v); setErrorExpanded((v) => !v); }} className="text-[10px] text-zinc-400 hover:text-indigo-500 transition-colors">
+                            {winExpanded ? "▴ hide" : "▾ breakdown"}
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-zinc-400">
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-sm bg-emerald-500 opacity-70" /> Win%</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-sm bg-red-400 opacity-70" /> Err%</span>
+                      </div>
+                    </div>
                   </td>
-                );
-              })}
-            </tr>
-          ))}
+                  {players.map((p) => {
+                    const winPct = totalPoints > 0 ? totalWins[p.player_id] / totalPoints : 0;
+                    const errPct = totalPoints > 0 ? totalErrors[p.player_id] / totalPoints : 0;
+                    const winW = maxPct > 0 ? (winPct / maxPct) * 100 : 0;
+                    const errW = maxPct > 0 ? (errPct / maxPct) * 100 : 0;
+                    return (
+                      <td key={p.player_id} className="py-2 px-3">
+                        <div className="flex flex-col gap-1">
+                          {/* Win bar */}
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex-1 h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 opacity-80 rounded-full transition-all duration-300"
+                                style={{ width: `${winW}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 w-7 text-right shrink-0">
+                              {totalPoints > 0 ? formatPct(winPct) : "—"}
+                            </span>
+                          </div>
+                          {/* Error bar */}
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex-1 h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-red-400 opacity-80 rounded-full transition-all duration-300"
+                                style={{ width: `${errW}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-medium text-red-500 dark:text-red-400 w-7 text-right shrink-0">
+                              {totalPoints > 0 ? formatPct(errPct) : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* Win breakdown */}
+                {winExpanded && WIN_COMPONENTS.map((wc) => (
+                  <tr key={wc.key} className="bg-zinc-50 dark:bg-zinc-800/30">
+                    <td className="py-1.5 px-3 pl-6 text-xs text-emerald-600 dark:text-emerald-500 italic">{wc.label}</td>
+                    {players.map((p) => {
+                      const pct = totalPoints > 0 ? winCounts[wc.key][p.player_id] / totalPoints : 0;
+                      return (
+                        <td key={p.player_id} className="py-1.5 px-3 text-center text-xs text-zinc-400">
+                          {totalPoints > 0 ? formatPct(pct) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+
+                {/* Error breakdown */}
+                {errorExpanded && ERROR_COMPONENTS.map((ec) => (
+                  <tr key={ec.key} className="bg-zinc-50 dark:bg-zinc-800/30">
+                    <td className="py-1.5 px-3 pl-6 text-xs text-red-400 dark:text-red-500 italic">{ec.label}</td>
+                    {players.map((p) => {
+                      const pct = totalPoints > 0 ? errorCounts[ec.key][p.player_id] / totalPoints : 0;
+                      return (
+                        <td key={p.player_id} className="py-1.5 px-3 text-center text-xs text-zinc-400">
+                          {totalPoints > 0 ? formatPct(pct) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            );
+          })()}
 
           {/* Winners */}
           <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
