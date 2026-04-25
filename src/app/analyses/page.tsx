@@ -207,7 +207,7 @@ function AnalysesContent() {
                       )}
                     </div>
                     <p className="text-xs text-zinc-400 mt-0.5">
-                      {session.owner_email ?? "Unknown"}
+                      Created by: {session.owner_nickname ?? session.owner_email ?? "Unknown"}
                       {isOwner && (
                         <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded text-[10px] font-medium">
                           you

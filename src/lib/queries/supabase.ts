@@ -134,10 +134,9 @@ interface FetchSessionsFilters {
 
 export async function fetchSessions(
   filters: FetchSessionsFilters = { status: "completed" }
-): Promise<(Session & { owner_email: string | null })[]> {
+): Promise<(Session & { owner_email: string | null; owner_nickname: string | null })[]> {
   let sessionIds: string[] | null = null;
 
-  // If player_ids filter is set, resolve matching session IDs via RPC first
   if (filters.player_ids && filters.player_ids.length > 0) {
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       "get_sessions_by_players",
@@ -145,7 +144,6 @@ export async function fetchSessions(
     );
     if (rpcError) throw rpcError;
     sessionIds = (rpcData ?? []) as string[];
-    // If no sessions match, return early
     if (sessionIds.length === 0) return [];
   }
 
@@ -172,9 +170,40 @@ export async function fetchSessions(
 
   const { data, error } = await query;
   if (error) throw error;
+
+  // Collect unique owner emails to batch-fetch nicknames
+  const ownerEmails = [
+    ...new Set(
+      (data ?? [])
+        .map((s) => {
+          const profile = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
+          return profile?.email ?? null;
+        })
+        .filter(Boolean) as string[]
+    ),
+  ];
+
+  // Fetch matching players by email
+  const nicknameMap: Record<string, string | null> = {};
+  if (ownerEmails.length > 0) {
+    const { data: playerData } = await supabase
+      .from("players")
+      .select("email, nickname")
+      .in("email", ownerEmails);
+    for (const p of playerData ?? []) {
+      if (p.email) nicknameMap[p.email] = p.nickname ?? null;
+    }
+  }
+
   return (data ?? []).map((s) => {
     const profile = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
-    return { ...s, profiles: undefined, owner_email: profile?.email ?? null };
+    const email = profile?.email ?? null;
+    return {
+      ...s,
+      profiles: undefined,
+      owner_email: email,
+      owner_nickname: email ? (nicknameMap[email] ?? null) : null,
+    };
   });
 }
 
