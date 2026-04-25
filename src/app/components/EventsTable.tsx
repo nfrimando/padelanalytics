@@ -158,7 +158,7 @@ function EventCard({
           {e.target_player_id && <> → {getPlayerLabel(e.target_player_id, players)}</>}
         </p>
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 shrink-0">
         <button onClick={() => setEditingId(e.id)}
           className="px-1.5 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
           Edit

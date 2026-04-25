@@ -234,7 +234,7 @@ export default function SessionPage({
                 onLoadingChange={setVideoLoading}
               />
             </div>
-            <p className="text-[10px] text-zinc-400 mt-1.5 text-center">
+            <p className="hidden lg:block text-[10px] text-zinc-400 mt-1.5 text-center">
               Space / K — play/pause · J — −10s · L — +10s
             </p>
           </div>
