@@ -247,7 +247,7 @@ export default function SessionPage({
           <div className="w-full lg:flex-[2] flex flex-col gap-4">
 
             {/* Event Logger */}
-            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-4">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-3">
               <EventLogger
                 players={sessionPlayers}
                 selectedSet={selectedSet}
@@ -257,6 +257,7 @@ export default function SessionPage({
                 involvedPlayer={involvedPlayer}
                 isLogging={isLogging}
                 locked={session?.status === "completed"}
+                compact
                 onSetChange={setSelectedSet}
                 onGameChange={setSelectedGame}
                 onPlayerChange={setSelectedPlayer}
@@ -267,8 +268,7 @@ export default function SessionPage({
               />
             </div>
 
-            {/* Events Table */}
-            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-4">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-3">
               <EventsTable
                 sessionId={sessionId}
                 events={events}

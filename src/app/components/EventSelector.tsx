@@ -5,6 +5,7 @@ interface EventSelectorProps {
   value: string | null;
   onChange: (eventName: string) => void;
   className?: string;
+  compact?: boolean;
 }
 
 export default function EventSelector({
@@ -12,16 +13,19 @@ export default function EventSelector({
   value,
   onChange,
   className = "",
+  compact = false,
 }: EventSelectorProps) {
   return (
-    <div className={`flex flex-wrap gap-2 ${className}`}>
+    <div className={`flex flex-wrap gap-1.5 ${className}`}>
       {eventNames.map((name) => {
         const isSelected = value === name;
         return (
           <button
             key={name}
             onClick={() => onChange(name)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+            className={`rounded-xl text-xs font-semibold border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              compact ? "px-2.5 py-1" : "px-4 py-2"
+            } ${
               isSelected
                 ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
                 : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"

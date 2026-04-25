@@ -10,6 +10,7 @@ interface SessionPlayerSelectorProps {
   onChange: (id: number) => void;
   disabledPositions?: number[];
   className?: string;
+  compact?: boolean;
 }
 
 export default function SessionPlayerSelector({
@@ -18,9 +19,10 @@ export default function SessionPlayerSelector({
   onChange,
   disabledPositions = [],
   className = "",
+  compact = false,
 }: SessionPlayerSelectorProps) {
   return (
-    <div className={`flex flex-wrap gap-2 ${className}`}>
+    <div className={`flex flex-wrap gap-1.5 ${className}`}>
       {players.map((p) => {
         const isSelected = selectedPlayer === p.id;
         const isDisabled = disabledPositions.includes(p.position);
@@ -30,7 +32,9 @@ export default function SessionPlayerSelector({
             onClick={() => onChange(p.id)}
             disabled={isDisabled}
             title={`Position ${p.position}`}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+            className={`rounded-xl text-xs font-semibold border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              compact ? "px-2.5 py-1" : "px-4 py-2"
+            } ${
               isSelected
                 ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
                 : isDisabled
