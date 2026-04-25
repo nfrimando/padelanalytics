@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock, LockOpen } from "lucide-react";
 import { useUpdateSession } from "@/lib/useUpdateSession";
 import type { SessionStatus } from "@/lib/utils/types";
 
@@ -24,17 +25,25 @@ export default function LockSessionButton({
     <button
       onClick={() => mutate({ status: isLocked ? "live" : "completed" })}
       disabled={isPending}
-      className={`px-4 py-2 rounded font-semibold transition-colors duration-150 ${
+      className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
         isLocked
-          ? "bg-yellow-500 text-white hover:bg-yellow-600 cursor-pointer"
-          : "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
-      } disabled:opacity-60 disabled:cursor-not-allowed`}
+          ? "text-amber-500 hover:text-amber-600"
+          : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+      }`}
     >
-      {isPending
-        ? "Saving..."
-        : isLocked
-          ? "🔓 Reopen Session"
-          : "🔒 Mark as Complete"}
+      {isPending ? (
+        <span className="text-xs">Saving...</span>
+      ) : isLocked ? (
+        <>
+          <LockOpen className="w-3.5 h-3.5" strokeWidth={2} />
+          Reopen
+        </>
+      ) : (
+        <>
+          <Lock className="w-3.5 h-3.5" strokeWidth={2} />
+          Complete
+        </>
+      )}
     </button>
   );
 }

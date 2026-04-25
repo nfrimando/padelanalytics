@@ -28,23 +28,29 @@ export default function VideoPlayer({
   }, []);
 
   return (
-    <div className="relative min-h-[200px]">
+    <div className="relative min-h-[160px]">
       {videoLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/70 dark:bg-black/70">
           <Spinner size="lg" />
         </div>
       )}
-      <YouTube
-        videoId={videoId}
-        onReady={(e) => {
-          onReady(e.target);
-          onLoadingChange(false);
-        }}
-        onStateChange={(e) => {
-          if (e.data === 1) onLoadingChange(false);
-        }}
-        opts={{ width: "100%", height: "432" }}
-      />
+      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+        <div className="absolute inset-0">
+          <YouTube
+            videoId={videoId}
+            onReady={(e) => {
+              onReady(e.target);
+              onLoadingChange(false);
+            }}
+            onStateChange={(e) => {
+              if (e.data === 1) onLoadingChange(false);
+            }}
+            opts={{ width: "100%", height: "100%" }}
+            style={{ width: "100%", height: "100%" }}
+            className="w-full h-full"
+          />
+        </div>
+      </div>
     </div>
   );
 }
