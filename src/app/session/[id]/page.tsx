@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { notFound } from "next/navigation";
 import React from "react";
 
 import { useSession } from "@/lib/useSession";
 import { useSessionPlayers } from "@/lib/useSessionPlayers";
 import { useCreateEvent } from "@/lib/useCreateEvent";
+import { useUpdateSession } from "@/lib/useUpdateSession";
 import { getPartnerPlayerId } from "@/lib/utils/session";
 import { useAuth } from "@/lib/useAuth";
 
@@ -45,6 +46,34 @@ export default function SessionPage({
   const { user } = useAuth();
 
   const isOwner = !!user && !!session && session.owner_id === user.id;
+
+  const { mutate: updateSession } = useUpdateSession(sessionId);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingTitle) titleInputRef.current?.focus();
+  }, [editingTitle]);
+
+  function handleTitleClick() {
+    if (!isOwner) return;
+    setTitleDraft(session?.title ?? "");
+    setEditingTitle(true);
+  }
+
+  function handleTitleSave() {
+    const trimmed = titleDraft.trim();
+    if (trimmed !== (session?.title ?? "")) {
+      updateSession({ title: trimmed || null });
+    }
+    setEditingTitle(false);
+  }
+
+  function handleTitleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") handleTitleSave();
+    if (e.key === "Escape") setEditingTitle(false);
+  }
 
   // FIX 1: only one declaration of useCreateEvent, with sessionId
   const { createEvent, loading: isLogging } = useCreateEvent(sessionId);
@@ -138,6 +167,36 @@ export default function SessionPage({
         </div>
       )}
 
+      {/* Inline title */}
+      <div className="col-span-2 -mt-2 mb-1 flex items-center gap-2">
+        {editingTitle ? (
+          <input
+            ref={titleInputRef}
+            className="text-lg font-semibold border-b border-zinc-400 bg-transparent outline-none w-full max-w-lg"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={handleTitleKeyDown}
+            placeholder="Untitled Match"
+          />
+        ) : (
+          <span
+            onClick={handleTitleClick}
+            className={`text-lg font-semibold text-zinc-800 dark:text-white ${
+              isOwner
+                ? "cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                : ""
+            }`}
+            title={isOwner ? "Click to edit title" : undefined}
+          >
+            {session?.title ?? "Untitled Match"}
+            {isOwner && (
+              <span className="ml-2 text-xs text-zinc-400 font-normal">✏️</span>
+            )}
+          </span>
+        )}
+      </div>
+
       {/* LEFT: Video */}
       {session?.youtube_video_id && (
         <VideoPlayer
@@ -158,6 +217,7 @@ export default function SessionPage({
           selectedPointType={selectedPointType}
           involvedPlayer={involvedPlayer}
           isLogging={isLogging}
+          locked={session?.status === "completed"}
           onSetChange={setSelectedSet}
           onGameChange={setSelectedGame}
           onPlayerChange={setSelectedPlayer}

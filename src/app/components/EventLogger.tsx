@@ -21,6 +21,7 @@ interface EventLoggerProps {
   selectedPointType: EventType | null;
   involvedPlayer: number | null;
   isLogging: boolean;
+  locked?: boolean;
   onSetChange: (set: number) => void;
   onGameChange: (game: number) => void;
   onPlayerChange: (id: number) => void;
@@ -38,6 +39,7 @@ export default function EventLogger({
   selectedPointType,
   involvedPlayer,
   isLogging,
+  locked = false,
   onSetChange,
   onGameChange,
   onPlayerChange,
@@ -74,7 +76,12 @@ export default function EventLogger({
     <div>
       <h2 className="font-bold mb-4 mt-8">Log Event</h2>
 
-      {/* Set and Game */}
+      {locked ? (
+        <div className="flex items-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-500 dark:text-zinc-400">
+          🔒 This session is completed. Reopen it to log new events.
+        </div>
+      ) : (
+      <>
       <div className="flex gap-4 mb-4">
         <div>
           <p className="font-semibold mb-2">Set</p>
@@ -167,6 +174,8 @@ export default function EventLogger({
           </button>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
