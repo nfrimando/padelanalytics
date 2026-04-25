@@ -35,12 +35,9 @@ export default function SessionPage({
   const [selectedSet, setSelectedSet] = useState(1);
   const [selectedGame, setSelectedGame] = useState(1);
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
-  const [selectedPointType, setSelectedPointType] = useState<EventType | null>(
-    null,
-  );
+  const [selectedPointType, setSelectedPointType] = useState<EventType | null>(null);
   const [involvedPlayer, setInvolvedPlayer] = useState<number | null>(null);
 
-  // FIX 4: useSession now returns a React Query object directly
   const { data: session, error: sessionError } = useSession(sessionId);
   const { sessionPlayers } = useSessionPlayers(sessionId);
   const { user } = useAuth();
@@ -75,10 +72,8 @@ export default function SessionPage({
     if (e.key === "Escape") setEditingTitle(false);
   }
 
-  // FIX 1: only one declaration of useCreateEvent, with sessionId
   const { createEvent, loading: isLogging } = useCreateEvent(sessionId);
 
-  // FIX 2: handleLogEvent is defined here
   const handleLogEvent = async (decrementSeconds = 0) => {
     if (!ytPlayer || !selectedPlayer || !selectedPointType || isLogging) return;
     const timestamp = Math.max(0, ytPlayer.getCurrentTime() - decrementSeconds);
@@ -91,21 +86,17 @@ export default function SessionPage({
       set_number: selectedSet,
       game_number: selectedGame,
     });
-    // No setEvents needed — cache handles it
     setSelectedPointType(null);
   };
 
-  // 404 on bad session
   useEffect(() => {
     if (sessionError) notFound();
   }, [sessionError]);
 
-  // Reset involved player when point type or player changes
   useEffect(() => {
     setInvolvedPlayer(null);
   }, [selectedPointType, selectedPlayer]);
 
-  // Auto-select partner for winner_assisted
   useEffect(() => {
     if (selectedPointType !== "winner_assisted" || !selectedPlayer) return;
     const playerObj = sessionPlayers.find((p) => p.id === selectedPlayer);
@@ -114,25 +105,18 @@ export default function SessionPage({
     if (partnerId) setInvolvedPlayer(partnerId);
   }, [selectedPointType, selectedPlayer, sessionPlayers]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (!ytPlayer) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-
       if (e.code === "Space" || e.key === "k" || e.key === "K") {
         e.preventDefault();
-        ytPlayer.getPlayerState?.() === 1
-          ? ytPlayer.pauseVideo()
-          : ytPlayer.playVideo();
+        ytPlayer.getPlayerState?.() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
       }
       if (e.key === "j" || e.key === "J") {
         e.preventDefault();
-        ytPlayer.seekTo(
-          Math.max((ytPlayer.getCurrentTime?.() ?? 0) - 10, 0),
-          true,
-        );
+        ytPlayer.seekTo(Math.max((ytPlayer.getCurrentTime?.() ?? 0) - 10, 0), true);
       }
       if (e.key === "l" || e.key === "L") {
         e.preventDefault();
@@ -149,89 +133,152 @@ export default function SessionPage({
     enabled: !!sessionId,
   });
 
+  useEffect(() => {
+    if (events.length === 0) return;
+    const last = events[events.length - 1];
+    setSelectedSet(last.set_number);
+    setSelectedGame(last.game_number);
+  }, [events.length > 0]);
+
   return (
-    <div className="p-6 grid grid-cols-2 gap-6 relative">
-      <a
-        href={`/analysis/${sessionId}`}
-        className="absolute right-0 top-0 mt-4 mr-4 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 font-semibold z-20"
-      >
-        Analytics
-      </a>
-      {session && (
-        <div className="absolute right-0 top-0 mt-4 mr-36 z-20">
-          <LockSessionButton
-            sessionId={sessionId}
-            status={session.status}
-            isOwner={isOwner}
-          />
-        </div>
-      )}
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col gap-4">
 
-      {/* Inline title */}
-      <div className="col-span-2 -mt-2 mb-1 flex items-center gap-2">
-        {editingTitle ? (
-          <input
-            ref={titleInputRef}
-            className="text-lg font-semibold border-b border-zinc-400 bg-transparent outline-none w-full max-w-lg"
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={handleTitleSave}
-            onKeyDown={handleTitleKeyDown}
-            placeholder="Untitled Match"
-          />
-        ) : (
-          <span
-            onClick={handleTitleClick}
-            className={`text-lg font-semibold text-zinc-800 dark:text-white ${
-              isOwner
-                ? "cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                : ""
-            }`}
-            title={isOwner ? "Click to edit title" : undefined}
-          >
-            {session?.title ?? "Untitled Match"}
-            {isOwner && (
-              <span className="ml-2 text-xs text-zinc-400 font-normal">✏️</span>
+        {/* Header */}
+        <div className="flex flex-col gap-1 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+          {/* Title row */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              {editingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  className="text-2xl font-bold bg-transparent outline-none w-full border-b-2 border-indigo-500 text-zinc-900 dark:text-white pb-0.5"
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onBlur={handleTitleSave}
+                  onKeyDown={handleTitleKeyDown}
+                  placeholder="Untitled Match"
+                />
+              ) : (
+                <h1
+                  onClick={handleTitleClick}
+                  className={`text-2xl font-bold text-zinc-900 dark:text-white truncate ${
+                    isOwner ? "cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" : ""
+                  }`}
+                >
+                  {session?.title ?? "Untitled Match"}
+                </h1>
+              )}
+            </div>
+
+            {/* Action links */}
+            <div className="flex items-center gap-3 shrink-0 pt-1">
+              {session && isOwner && (
+                <LockSessionButton
+                  sessionId={sessionId}
+                  status={session.status}
+                  isOwner={isOwner}
+                />
+              )}
+              <a
+                href={`/analysis/${sessionId}`}
+                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors"
+              >
+                View Analysis →
+              </a>
+            </div>
+          </div>
+
+          {/* Metadata row */}
+          <div className="flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
+            {/* Status dot */}
+            <span className="flex items-center gap-1">
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${session?.status === "completed" ? "bg-zinc-400" : "bg-emerald-500"}`} />
+              <span className="capitalize">{session?.status ?? "loading"}</span>
+            </span>
+            {session?.created_at && (
+              <>
+                <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                <span>
+                  {new Date(session.created_at).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </>
             )}
-          </span>
-        )}
-      </div>
+            {isOwner && (
+              <>
+                <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                <span
+                  onClick={handleTitleClick}
+                  className="text-zinc-400 hover:text-indigo-500 cursor-pointer transition-colors"
+                  title="Click to edit title"
+                >
+                  Rename
+                </span>
+              </>
+            )}
+          </div>
+        </div>
 
-      {/* LEFT: Video */}
-      {session?.youtube_video_id && (
-        <VideoPlayer
-          videoId={session.youtube_video_id}
-          videoLoading={videoLoading}
-          onReady={setYtPlayer}
-          onLoadingChange={setVideoLoading}
-        />
-      )}
+        {/* Main layout: stacked on mobile, side-by-side on desktop */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
 
-      {/* RIGHT: Controls + Table */}
-      <div>
-        <EventLogger
-          players={sessionPlayers}
-          selectedSet={selectedSet}
-          selectedGame={selectedGame}
-          selectedPlayer={selectedPlayer}
-          selectedPointType={selectedPointType}
-          involvedPlayer={involvedPlayer}
-          isLogging={isLogging}
-          locked={session?.status === "completed"}
-          onSetChange={setSelectedSet}
-          onGameChange={setSelectedGame}
-          onPlayerChange={setSelectedPlayer}
-          onPointTypeChange={setSelectedPointType}
-          onInvolvedPlayerChange={setInvolvedPlayer}
-          onLogNow={() => handleLogEvent(0)}
-          onLogSecondsAgo={handleLogEvent}
-        />
-        <EventsTable
-          sessionId={sessionId}
-          events={events}
-          players={sessionPlayers}
-          onSeek={(s) => ytPlayer?.seekTo(s, true)}
-        />
+          {/* Video — full width on mobile, 60% on desktop */}
+          {session?.youtube_video_id && (
+            <div className="w-full lg:flex-[3]">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow border border-zinc-100 dark:border-zinc-800">
+                <VideoPlayer
+                  videoId={session.youtube_video_id}
+                  videoLoading={videoLoading}
+                  onReady={setYtPlayer}
+                  onLoadingChange={setVideoLoading}
+                />
+              </div>
+              <p className="text-[10px] text-zinc-400 mt-1.5 text-center">
+                Space / K — play/pause · J — −10s · L — +10s
+              </p>
+            </div>
+          )}
+
+          {/* Controls — full width on mobile, 40% on desktop */}
+          <div className="w-full lg:flex-[2] flex flex-col gap-4">
+
+            {/* Event Logger */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-4">
+              <EventLogger
+                players={sessionPlayers}
+                selectedSet={selectedSet}
+                selectedGame={selectedGame}
+                selectedPlayer={selectedPlayer}
+                selectedPointType={selectedPointType}
+                involvedPlayer={involvedPlayer}
+                isLogging={isLogging}
+                locked={session?.status === "completed"}
+                onSetChange={setSelectedSet}
+                onGameChange={setSelectedGame}
+                onPlayerChange={setSelectedPlayer}
+                onPointTypeChange={setSelectedPointType}
+                onInvolvedPlayerChange={setInvolvedPlayer}
+                onLogNow={() => handleLogEvent(0)}
+                onLogSecondsAgo={handleLogEvent}
+              />
+            </div>
+
+            {/* Events Table */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-4">
+              <EventsTable
+                sessionId={sessionId}
+                events={events}
+                players={sessionPlayers}
+                onSeek={(s) => ytPlayer?.seekTo(s, true)}
+              />
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   );
