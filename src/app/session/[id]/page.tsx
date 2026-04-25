@@ -223,60 +223,53 @@ export default function SessionPage({
           </div>
         </div>
 
-        {/* Main layout: stacked on mobile, side-by-side on desktop */}
+        {/* Video — full width on top */}
+        {session?.youtube_video_id && (
+          <div className="w-full">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow border border-zinc-100 dark:border-zinc-800 lg:max-w-2xl lg:mx-auto">
+              <VideoPlayer
+                videoId={session.youtube_video_id}
+                videoLoading={videoLoading}
+                onReady={setYtPlayer}
+                onLoadingChange={setVideoLoading}
+              />
+            </div>
+            <p className="text-[10px] text-zinc-400 mt-1.5 text-center">
+              Space / K — play/pause · J — −10s · L — +10s
+            </p>
+          </div>
+        )}
+
+        {/* Bottom: logger left, events right */}
         <div className="flex flex-col lg:flex-row gap-4 items-start">
+          <div className="w-full lg:flex-1 bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-3">
+            <EventLogger
+              players={sessionPlayers}
+              selectedSet={selectedSet}
+              selectedGame={selectedGame}
+              selectedPlayer={selectedPlayer}
+              selectedPointType={selectedPointType}
+              involvedPlayer={involvedPlayer}
+              isLogging={isLogging}
+              locked={session?.status === "completed"}
+              compact
+              onSetChange={setSelectedSet}
+              onGameChange={setSelectedGame}
+              onPlayerChange={setSelectedPlayer}
+              onPointTypeChange={setSelectedPointType}
+              onInvolvedPlayerChange={setInvolvedPlayer}
+              onLogNow={() => handleLogEvent(0)}
+              onLogSecondsAgo={handleLogEvent}
+            />
+          </div>
 
-          {/* Video — full width on mobile, 60% on desktop */}
-          {session?.youtube_video_id && (
-            <div className="w-full lg:flex-[3]">
-              <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow border border-zinc-100 dark:border-zinc-800">
-                <VideoPlayer
-                  videoId={session.youtube_video_id}
-                  videoLoading={videoLoading}
-                  onReady={setYtPlayer}
-                  onLoadingChange={setVideoLoading}
-                />
-              </div>
-              <p className="text-[10px] text-zinc-400 mt-1.5 text-center">
-                Space / K — play/pause · J — −10s · L — +10s
-              </p>
-            </div>
-          )}
-
-          {/* Controls — full width on mobile, 40% on desktop */}
-          <div className="w-full lg:flex-[2] flex flex-col gap-4">
-
-            {/* Event Logger */}
-            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-3">
-              <EventLogger
-                players={sessionPlayers}
-                selectedSet={selectedSet}
-                selectedGame={selectedGame}
-                selectedPlayer={selectedPlayer}
-                selectedPointType={selectedPointType}
-                involvedPlayer={involvedPlayer}
-                isLogging={isLogging}
-                locked={session?.status === "completed"}
-                compact
-                onSetChange={setSelectedSet}
-                onGameChange={setSelectedGame}
-                onPlayerChange={setSelectedPlayer}
-                onPointTypeChange={setSelectedPointType}
-                onInvolvedPlayerChange={setInvolvedPlayer}
-                onLogNow={() => handleLogEvent(0)}
-                onLogSecondsAgo={handleLogEvent}
-              />
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-3">
-              <EventsTable
-                sessionId={sessionId}
-                events={events}
-                players={sessionPlayers}
-                onSeek={(s) => ytPlayer?.seekTo(s, true)}
-              />
-            </div>
-
+          <div className="w-full lg:flex-1 bg-white dark:bg-zinc-900 rounded-xl shadow border border-zinc-100 dark:border-zinc-800 p-3">
+            <EventsTable
+              sessionId={sessionId}
+              events={events}
+              players={sessionPlayers}
+              onSeek={(s) => ytPlayer?.seekTo(s, true)}
+            />
           </div>
         </div>
       </div>

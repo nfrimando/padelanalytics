@@ -179,7 +179,7 @@ export default function EventsTable({
   onSeek,
 }: EventsTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true);
 
   const { updateEvent, loading: updatingEvent } = useUpdateEvent(sessionId);
   const { deleteEvent, loading: deletingEvent } = useDeleteEvent(sessionId);
