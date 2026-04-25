@@ -12,9 +12,15 @@ export interface SessionFilters {
 export type SessionWithOwner = Session & { owner_email: string | null; owner_nickname: string | null };
 
 export function useSessions(filters: SessionFilters = { status: "completed" }) {
+  const fetchFilters = {
+    ...filters,
+    player_ids: filters.player_id !== undefined ? [filters.player_id] : undefined,
+    player_id: undefined,
+  };
+
   const query = useQuery({
     queryKey: queryKeys.sessions(filters),
-    queryFn: () => fetchSessions(filters),
+    queryFn: () => fetchSessions(fetchFilters),
   });
 
   return {
