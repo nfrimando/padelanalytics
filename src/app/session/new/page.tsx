@@ -5,6 +5,7 @@ import { usePlayers } from "@/lib/usePlayers";
 import type { Player, PlayerPosition } from "@/lib/utils/types";
 import { useRouter } from "next/navigation";
 import Spinner from "@/app/components/Spinner";
+import PlayerCombobox from "@/app/components/PlayerCombobox";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 function extractVideoId(url: string) {
@@ -148,98 +149,34 @@ export default function NewSessionPage() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {/* Team 1: left column, Team 2: right column */}
-          <select
-            id="team_1_player_1"
-            tabIndex={1}
-            className={`border p-2 rounded w-full transition-colors duration-150 ${
-              !videoId || playersLoading
-                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
-                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
-            }`}
+          <PlayerCombobox
+            players={sortedPlayers}
+            value={selectedPlayers[0]}
+            onChange={(id) => handlePlayerSelect(0, id)}
+            placeholder={playersLoading ? "Loading..." : "Select Player 1"}
             disabled={!videoId || playersLoading}
-            value={selectedPlayers[0] ?? ""}
-            onChange={(e) => handlePlayerSelect(0, Number(e.target.value))}
-          >
-            <option value="" disabled>
-              {playersLoading ? "Loading..." : "Select Player 1"}
-            </option>
-            {sortedPlayers.map((player: Player) => (
-              <option key={player.player_id} value={player.player_id}>
-                {player.nickname ||
-                  player.player_name ||
-                  `Player ${player.player_id}`}
-              </option>
-            ))}
-          </select>
-          <select
-            id="team_2_player_1"
-            tabIndex={3}
-            className={`border p-2 rounded w-full transition-colors duration-150 ${
-              !videoId || playersLoading
-                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
-                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
-            }`}
+          />
+          <PlayerCombobox
+            players={sortedPlayers}
+            value={selectedPlayers[2]}
+            onChange={(id) => handlePlayerSelect(2, id)}
+            placeholder={playersLoading ? "Loading..." : "Select Player 3"}
             disabled={!videoId || playersLoading}
-            value={selectedPlayers[2] ?? ""}
-            onChange={(e) => handlePlayerSelect(2, Number(e.target.value))}
-          >
-            <option value="" disabled>
-              {playersLoading ? "Loading..." : "Select Player 3"}
-            </option>
-            {sortedPlayers.map((player: Player) => (
-              <option key={player.player_id} value={player.player_id}>
-                {player.nickname ||
-                  player.player_name ||
-                  `Player ${player.player_id}`}
-              </option>
-            ))}
-          </select>
-          <select
-            id="team_1_player_2"
-            tabIndex={2}
-            className={`border p-2 rounded w-full transition-colors duration-150 ${
-              !videoId || playersLoading
-                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
-                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
-            }`}
+          />
+          <PlayerCombobox
+            players={sortedPlayers}
+            value={selectedPlayers[1]}
+            onChange={(id) => handlePlayerSelect(1, id)}
+            placeholder={playersLoading ? "Loading..." : "Select Player 2"}
             disabled={!videoId || playersLoading}
-            value={selectedPlayers[1] ?? ""}
-            onChange={(e) => handlePlayerSelect(1, Number(e.target.value))}
-          >
-            <option value="" disabled>
-              {playersLoading ? "Loading..." : "Select Player 2"}
-            </option>
-            {sortedPlayers.map((player: Player) => (
-              <option key={player.player_id} value={player.player_id}>
-                {player.nickname ||
-                  player.player_name ||
-                  `Player ${player.player_id}`}
-              </option>
-            ))}
-          </select>
-          <select
-            id="team_2_player_2"
-            tabIndex={4}
-            className={`border p-2 rounded w-full transition-colors duration-150 ${
-              !videoId || playersLoading
-                ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
-                : "bg-white text-black border-black cursor-pointer hover:bg-gray-50"
-            }`}
+          />
+          <PlayerCombobox
+            players={sortedPlayers}
+            value={selectedPlayers[3]}
+            onChange={(id) => handlePlayerSelect(3, id)}
+            placeholder={playersLoading ? "Loading..." : "Select Player 4"}
             disabled={!videoId || playersLoading}
-            value={selectedPlayers[3] ?? ""}
-            onChange={(e) => handlePlayerSelect(3, Number(e.target.value))}
-          >
-            <option value="" disabled>
-              {playersLoading ? "Loading..." : "Select Player 4"}
-            </option>
-            {sortedPlayers.map((player: Player) => (
-              <option key={player.player_id} value={player.player_id}>
-                {player.nickname ||
-                  player.player_name ||
-                  `Player ${player.player_id}`}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       </div>
 
