@@ -73,7 +73,7 @@ export default function AnalysisPage({
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex justify-end mb-4">
+      <div className="mb-4">
         <BackToSessionButton sessionId={session_id} />
       </div>
 
