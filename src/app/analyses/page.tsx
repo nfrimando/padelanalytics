@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSessions } from "@/lib/useSessions";
 import { usePlayers } from "@/lib/usePlayers";
@@ -27,18 +27,17 @@ function AnalysesContent() {
   const { players } = usePlayers();
   const searchParams = useSearchParams();
 
+  const initialPlayerId = (() => {
+    const p = searchParams.get("player");
+    if (!p) return undefined;
+    const id = parseInt(p, 10);
+    return isNaN(id) ? undefined : id;
+  })();
+
   const [selectedStatuses, setSelectedStatuses] = useState<SessionStatus[]>(["completed"]);
   const [playerSearch, setPlayerSearch] = useState("");
-  const [selectedPlayerId, setSelectedPlayerId] = useState<number | undefined>(undefined);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | undefined>(initialPlayerId);
   const [playerDropdownOpen, setPlayerDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    const playerParam = searchParams.get("player");
-    if (playerParam) {
-      const id = parseInt(playerParam, 10);
-      if (!isNaN(id)) setSelectedPlayerId(id);
-    }
-  }, [searchParams]);
 
   const { sessions, isLoading } = useSessions({
     status: selectedStatuses,
@@ -207,7 +206,7 @@ function AnalysesContent() {
                       )}
                     </div>
                     <p className="text-xs text-zinc-400 mt-0.5">
-                      Created by: {session.owner_nickname ?? session.owner_email ?? "Unknown"}
+                      {session.owner_nickname ?? session.owner_email ?? "Unknown"}
                       {isOwner && (
                         <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded text-[10px] font-medium">
                           you
