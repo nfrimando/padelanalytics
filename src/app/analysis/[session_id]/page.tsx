@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import React from "react";
 import Spinner from "@/app/components/Spinner";
-import AnalyticsPlayerEventTable from "@/app/components/AnalyticsPlayerEventTable";
+import PlayerEventBreakdown from "@/app/components/PlayerEventBreakdown";
 import MatchSummaryCard from "@/app/components/MatchSummaryCard";
 import BackToSessionButton from "@/app/components/BackToSessionButton";
 import PlayerContributionChart from "@/app/components/PlayerContributionChart";
@@ -15,6 +15,9 @@ import {
   useMatchPlayerEventAggregates,
   useSessionPlayersWithNames,
 } from "@/lib/useAnalytics";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queries/keys";
+import { fetchSessionEvents } from "@/lib/queries/supabase";
 import { buildSetSummaries } from "@/lib/matchSummaryUtils";
 
 const UUID_V4_REGEX =
@@ -51,6 +54,12 @@ export default function AnalysisPage({
   const { data: setsData = [] } = useMatchSetsGamesTeamsAggregates(session_id);
   const { data: playerEventAggs, isLoading: playerEventAggsLoading } = useMatchPlayerEventAggregates(session_id);
   const { data: sessionPlayers = [] } = useSessionPlayersWithNames(session_id);
+  const { data: events = [] } = useQuery({
+    queryKey: queryKeys.sessionEvents(session_id),
+    queryFn: () => fetchSessionEvents(session_id),
+    enabled: !!session_id,
+    staleTime: 1000 * 5,
+  });
 
   // Build set summaries once, share across components
   const sets = setsData.length > 0 ? buildSetSummaries(setsData) : [];
@@ -90,10 +99,8 @@ export default function AnalysisPage({
             <Spinner size="md" />
             <span className="text-zinc-500">Loading player event data...</span>
           </div>
-        ) : playerEventAggs && playerEventAggs.length > 0 ? (
-          <AnalyticsPlayerEventTable data={playerEventAggs} />
         ) : (
-          <div className="text-zinc-400 text-center">No player event data available.</div>
+          <PlayerEventBreakdown data={playerEventAggs ?? []} sessionPlayers={sessionPlayers} events={events} />
         )}
       </div>
     </div>
