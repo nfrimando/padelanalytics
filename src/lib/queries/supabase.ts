@@ -9,7 +9,8 @@ import type {
   PlayerPosition, 
   MatchAggregates, 
   MatchPlayerEventAggregates,
-  MatchSetsGamesTeamsAggregates
+  MatchSetsGamesTeamsAggregates,
+  PlayerDynamics,
 } from "@/lib/utils/types";
 
 // Each function is a plain async function that either returns data or throws.
@@ -237,4 +238,16 @@ export async function fetchMatchSetsGamesTeamsAggregates(
   });
   if (error) throw error;
   return data as MatchSetsGamesTeamsAggregates[];
+}
+
+export async function fetchPlayerDynamics(
+  sessionId: string,
+  setNumber?: number
+): Promise<PlayerDynamics[]> {
+  const { data, error } = await supabase.rpc("get_player_dynamics", {
+    session_id: sessionId,
+    filter_set_number: setNumber ?? null,
+  });
+  if (error) throw error;
+  return data as PlayerDynamics[];
 }

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import React from "react";
 import Spinner from "@/app/components/Spinner";
 import PlayerEventBreakdown from "@/app/components/PlayerEventBreakdown";
+import PlayerDynamicsMatrix from "@/app/components/PlayerDynamicsMatrix";
 import MatchSummaryCard from "@/app/components/MatchSummaryCard";
 import BackToSessionButton from "@/app/components/BackToSessionButton";
 import PlayerContributionChart from "@/app/components/PlayerContributionChart";
@@ -14,6 +15,7 @@ import {
   useMatchSetsGamesTeamsAggregates,
   useMatchPlayerEventAggregates,
   useSessionPlayersWithNames,
+  usePlayerDynamics,
 } from "@/lib/useAnalytics";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queries/keys";
@@ -58,6 +60,7 @@ export default function AnalysisPage({
   const { data: aggregates } = useMatchAggregates(session_id);
   const { data: setsData = [] } = useMatchSetsGamesTeamsAggregates(session_id);
   const { data: playerEventAggs, isLoading: playerEventAggsLoading, isFetching: playerEventAggsFetching } = useMatchPlayerEventAggregates(session_id, selectedSet);
+  const { data: dynamicsData = [] } = usePlayerDynamics(session_id, selectedSet);
   const { data: sessionPlayers = [] } = useSessionPlayersWithNames(session_id);
   const { data: events = [] } = useQuery({
     queryKey: queryKeys.sessionEvents(session_id),
@@ -72,14 +75,14 @@ export default function AnalysisPage({
   if (status === "not_found") notFound();
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-4">
+    <div className="p-6 max-w-5xl mx-auto flex flex-col gap-6">
+      <div>
         <BackToSessionButton sessionId={session_id} />
       </div>
 
       {/* Live session banner */}
       {sessionStatus && sessionStatus !== "completed" && (
-        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-sm text-amber-700 dark:text-amber-400">
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-sm text-amber-700 dark:text-amber-400">
           <span>⚠️</span>
           <span>This analysis is still <span className="font-semibold">in progress</span> — data may be incomplete. The owner can mark it as complete from the session page.</span>
         </div>
@@ -159,6 +162,22 @@ export default function AnalysisPage({
           </div>
         )}
       </div>
+
+      {/* Player Dynamics */}
+      {sessionPlayers.length > 0 && (
+        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow p-6 border border-zinc-100 dark:border-zinc-800">
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+            Player Dynamics
+          </h2>
+          <p className="text-xs text-zinc-400 mb-4">
+            Head-to-head pressure between players across teams
+          </p>
+          <PlayerDynamicsMatrix
+            data={dynamicsData}
+            players={sessionPlayers}
+          />
+        </div>
+      )}
     </div>
   );
 }

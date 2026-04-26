@@ -5,6 +5,7 @@ import {
   fetchMatchPlayerEventAggregates,
   fetchMatchSetsGamesTeamsAggregates,
   fetchSessionPlayersWithNames,
+  fetchPlayerDynamics,
 } from "@/lib/queries/supabase";
 
 // Analytics data is read-only and doesn't change while you're viewing it,
@@ -44,5 +45,15 @@ export function useSessionPlayersWithNames(sessionId: string) {
     queryFn: () => fetchSessionPlayersWithNames(sessionId),
     enabled: !!sessionId,
     staleTime: ANALYTICS_STALE_TIME,
+  });
+}
+
+export function usePlayerDynamics(sessionId: string, setNumber?: number) {
+  return useQuery({
+    queryKey: queryKeys.playerDynamics(sessionId, setNumber),
+    queryFn: () => fetchPlayerDynamics(sessionId, setNumber),
+    enabled: !!sessionId,
+    staleTime: ANALYTICS_STALE_TIME,
+    placeholderData: (prev) => prev,
   });
 }

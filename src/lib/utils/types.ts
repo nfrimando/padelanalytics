@@ -88,6 +88,15 @@ export interface MatchPlayerEventAggregates {
   count: number;
 }
 
+export interface PlayerDynamics {
+  actor_player_id: number;
+  actor_name: string;
+  target_player_id: number;
+  target_name: string;
+  event_type: string;
+  count: number;
+}
+
 export interface MatchSetsGamesTeamsAggregates {
   set_number: number;
   game_number: number;
