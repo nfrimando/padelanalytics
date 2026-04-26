@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { PlayerDynamics, SessionPlayerWithName } from "@/lib/utils/types";
 
 interface PlayerDynamicsMatrixProps {
@@ -48,6 +49,25 @@ function maxValue(matrix: Record<number, Record<number, number>>, playerIds: num
   return max;
 }
 
+type MatrixType = "combined" | "forced_error" | "winner_fed";
+
+function getCellTooltip(
+  actorName: string,
+  targetName: string,
+  value: number,
+  matrixType: MatrixType
+): string {
+  if (value === 0) return "";
+  switch (matrixType) {
+    case "combined":
+      return `${actorName} got ${value} pressure point${value !== 1 ? "s" : ""} on ${targetName}`;
+    case "forced_error":
+      return `${actorName} forced ${value} error${value !== 1 ? "s" : ""} on ${targetName}`;
+    case "winner_fed":
+      return `${actorName} had ${value} winner${value !== 1 ? "s" : ""} from ${targetName}'s fed shot${value !== 1 ? "s" : ""}`;
+  }
+}
+
 // ─── Single matrix ────────────────────────────────────────────────────────────
 
 function Matrix({
@@ -57,6 +77,7 @@ function Matrix({
   playerIds,
   players,
   colorClass,
+  matrixType,
 }: {
   title: string;
   description: string;
@@ -64,7 +85,9 @@ function Matrix({
   playerIds: number[];
   players: SessionPlayerWithName[];
   colorClass: string;
+  matrixType: MatrixType;
 }) {
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const max = maxValue(matrix, playerIds);
 
   return (
@@ -73,6 +96,17 @@ function Matrix({
         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{title}</p>
         <p className="text-xs text-zinc-400">{description}</p>
       </div>
+
+      {/* Fixed tooltip rendered outside table overflow context */}
+      {tooltip && (
+        <div
+          className="fixed z-[100] w-52 bg-zinc-900 dark:bg-zinc-700 text-white text-xs rounded-lg px-3 py-2 shadow-xl pointer-events-none text-center"
+          style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -110%)" }}
+        >
+          {tooltip.text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-700" />
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="text-xs border-separate border-spacing-1">
@@ -105,6 +139,9 @@ function Matrix({
                   const value = matrix[actorId]?.[targetId] ?? 0;
                   const isSelf = actorId === targetId;
                   const intensity = max > 0 && !isSelf ? value / max : 0;
+                  const tooltipText = !isSelf && value > 0
+                    ? getCellTooltip(getPlayerName(actorId, players), getPlayerName(targetId, players), value, matrixType)
+                    : "";
 
                   return (
                     <td key={targetId} className="text-center">
@@ -114,12 +151,23 @@ function Matrix({
                         </div>
                       ) : (
                         <div
-                          className={`w-14 h-10 rounded-lg flex items-center justify-center font-semibold transition-colors ${
+                          className={`w-14 h-10 rounded-lg flex items-center justify-center font-semibold transition-all cursor-default ${
                             value === 0
                               ? "bg-zinc-50 dark:bg-zinc-900 text-zinc-300 dark:text-zinc-700"
                               : `${colorClass} text-white`
-                          }`}
+                          } ${tooltip && value > 0 ? "" : ""}`}
                           style={{ opacity: value === 0 ? 1 : 0.3 + intensity * 0.7 }}
+                          onMouseEnter={(e) => {
+                            if (tooltipText) {
+                              const rect = (e.target as HTMLElement).getBoundingClientRect();
+                              setTooltip({
+                                text: tooltipText,
+                                x: rect.left + rect.width / 2,
+                                y: rect.top,
+                              });
+                            }
+                          }}
+                          onMouseLeave={() => setTooltip(null)}
                         >
                           {value === 0 ? "0" : value}
                         </div>
@@ -204,6 +252,7 @@ export default function PlayerDynamicsMatrix({
           playerIds={playerIds}
           players={players}
           colorClass="bg-emerald-500"
+          matrixType="combined"
         />
         <Matrix
           title="Forced Errors"
@@ -212,6 +261,7 @@ export default function PlayerDynamicsMatrix({
           playerIds={playerIds}
           players={players}
           colorClass="bg-indigo-500"
+          matrixType="forced_error"
         />
         <Matrix
           title="Fed Winners"
@@ -220,6 +270,7 @@ export default function PlayerDynamicsMatrix({
           playerIds={playerIds}
           players={players}
           colorClass="bg-red-400"
+          matrixType="winner_fed"
         />
       </div>
     </div>
