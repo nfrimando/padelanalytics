@@ -98,6 +98,7 @@ export async function createEventMutation(params: {
   target_player_id: number | null;
   set_number: number;
   game_number: number;
+  logged_by: string | null;
 }): Promise<Event> {
   const { data, error } = await supabase
     .from("events")

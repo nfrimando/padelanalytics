@@ -54,6 +54,7 @@ export interface Event {
   target_player_id: number | null;
   set_number: number;
   game_number: number;
+  logged_by: string | null;
   created_at: string;
   updated_at: string;
 }
