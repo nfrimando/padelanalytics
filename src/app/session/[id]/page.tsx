@@ -10,11 +10,13 @@ import { useCreateEvent } from "@/lib/useCreateEvent";
 import { useUpdateSession } from "@/lib/useUpdateSession";
 import { getPartnerPlayerId } from "@/lib/utils/session";
 import { useAuth } from "@/lib/useAuth";
+import { useCanEdit } from "@/lib/useSessionAccess";
 
 import VideoPlayer from "@/app/components/VideoPlayer";
 import EventLogger from "@/app/components/EventLogger";
 import EventsTable from "@/app/components/EventsTable";
 import LockSessionButton from "@/app/components/LockSessionButton";
+import SessionAccessSettings from "@/app/components/SessionAccessSettings";
 
 import type { EventType } from "@/lib/utils/types";
 
@@ -43,6 +45,7 @@ export default function SessionPage({
   const { user } = useAuth();
 
   const isOwner = !!user && !!session && session.owner_id === user.id;
+  const { canEdit } = useCanEdit(sessionId, session?.owner_id);
 
   const { mutate: updateSession } = useUpdateSession(sessionId);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -221,6 +224,11 @@ export default function SessionPage({
               </>
             )}
           </div>
+
+          {/* Access settings — owner only */}
+          {isOwner && session && (
+            <SessionAccessSettings session={session} />
+          )}
         </div>
 
         {/* Video — full width on top */}
@@ -251,7 +259,7 @@ export default function SessionPage({
               selectedPointType={selectedPointType}
               involvedPlayer={involvedPlayer}
               isLogging={isLogging}
-              locked={session?.status === "completed"}
+              locked={session?.status === "completed" || !canEdit}
               compact
               onSetChange={setSelectedSet}
               onGameChange={setSelectedGame}
@@ -269,6 +277,7 @@ export default function SessionPage({
               events={events}
               players={sessionPlayers}
               onSeek={(s) => ytPlayer?.seekTo(s, true)}
+              locked={session?.status === "completed" || !canEdit}
             />
           </div>
         </div>

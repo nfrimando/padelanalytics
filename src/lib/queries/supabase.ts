@@ -2,6 +2,8 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { 
   Session,
   SessionStatus,
+  EditMode,
+  SessionAccess,
   Event, 
   Player, 
   SessionPlayerOption,
@@ -250,4 +252,61 @@ export async function fetchPlayerDynamics(
   });
   if (error) throw error;
   return data as PlayerDynamics[];
+}
+
+// ─── Session Access ───────────────────────────────────────────────────────────
+
+export async function fetchSessionAccess(sessionId: string): Promise<SessionAccess[]> {
+  const { data, error } = await supabase
+    .from("session_access")
+    .select("*, profiles(email)")
+    .eq("session_id", sessionId)
+    .order("granted_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return { ...row, profiles: undefined, email: profile?.email ?? undefined };
+  });
+}
+
+export async function grantSessionAccess(
+  sessionId: string,
+  email: string,
+  accessLevel: "view" | "edit"
+): Promise<void> {
+  // Look up profile by email via RPC
+  const { data: profileData, error: profileError } = await supabase.rpc(
+    "get_profile_by_email",
+    { lookup_email: email }
+  );
+  if (profileError) throw profileError;
+  const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+  if (!profile) throw new Error(`No user found with email: ${email}`);
+
+  const { error } = await supabase
+    .from("session_access")
+    .upsert(
+      { session_id: sessionId, user_id: profile.id, access_level: accessLevel },
+      { onConflict: "session_id,user_id" }
+    );
+  if (error) throw error;
+}
+
+export async function revokeSessionAccess(accessId: string): Promise<void> {
+  const { error } = await supabase
+    .from("session_access")
+    .delete()
+    .eq("id", accessId);
+  if (error) throw error;
+}
+
+export async function fetchUserEditAccess(sessionId: string, userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("session_access")
+    .select("access_level")
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .single();
+  if (error) return false;
+  return data?.access_level === "edit";
 }

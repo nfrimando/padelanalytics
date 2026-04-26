@@ -11,4 +11,5 @@ export const queryKeys = {
   matchPlayerEventAggregates: (sessionId: string, setNumber?: number) => ["analytics", "matchPlayerEventAggregates", sessionId, setNumber ?? "all"] as const,
   matchSetsGamesTeamsAggregates: (sessionId: string) => ["analytics", "matchSetGamesTeamAggregates", sessionId] as const,
   playerDynamics: (sessionId: string, setNumber?: number) => ["analytics", "playerDynamics", sessionId, setNumber ?? "all"] as const,
+  sessionAccess: (sessionId: string) => ["sessionAccess", sessionId] as const,
 };

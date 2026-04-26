@@ -16,6 +16,7 @@ interface EventsTableProps {
   events: Event[];
   players: SessionPlayerOption[];
   onSeek: (seconds: number) => void;
+  locked?: boolean;
 }
 
 function EditRow({
@@ -110,6 +111,7 @@ function EventCard({
   updatingEvent,
   deletingEvent,
   highlight = false,
+  locked = false,
 }: {
   e: Event;
   players: SessionPlayerOption[];
@@ -121,6 +123,7 @@ function EventCard({
   updatingEvent: boolean;
   deletingEvent: boolean;
   highlight?: boolean;
+  locked?: boolean;
 }) {
   if (editingId === e.id) {
     return (
@@ -159,14 +162,18 @@ function EventCard({
         </p>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 shrink-0">
-        <button onClick={() => setEditingId(e.id)}
-          className="px-1.5 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-          Edit
-        </button>
-        <button onClick={onDelete} disabled={deletingEvent}
-          className="px-1.5 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50">
-          Del
-        </button>
+        {!locked && (
+          <>
+            <button onClick={() => setEditingId(e.id)}
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+              Edit
+            </button>
+            <button onClick={onDelete} disabled={deletingEvent}
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50">
+              Del
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -177,6 +184,7 @@ export default function EventsTable({
   events,
   players,
   onSeek,
+  locked = false,
 }: EventsTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(true);
@@ -217,6 +225,7 @@ export default function EventsTable({
               updatingEvent={updatingEvent}
               deletingEvent={deletingEvent}
               highlight
+              locked={locked}
             />
           )}
           {rest.length > 0 && (
@@ -241,6 +250,7 @@ export default function EventsTable({
                       onDelete={() => deleteEvent(e.id)}
                       updatingEvent={updatingEvent}
                       deletingEvent={deletingEvent}
+                      locked={locked}
                     />
                   ))}
                 </div>

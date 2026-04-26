@@ -4,7 +4,7 @@ import { queryKeys } from "@/lib/queries/keys";
 import type { Session } from "@/lib/utils/types";
 
 type SessionUpdatableFields = Partial<
-  Pick<Session, "status" | "title" | "youtube_url" | "youtube_video_id">
+  Pick<Session, "status" | "title" | "youtube_url" | "youtube_video_id" | "edit_mode">
 >;
 
 export function useUpdateSession(sessionId: string) {

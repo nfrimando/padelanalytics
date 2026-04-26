@@ -121,7 +121,7 @@ export default function EventLogger({
     return (
       <div className="flex items-center gap-2 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-500 dark:text-zinc-400">
         <Lock className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-        This session is completed. Reopen it to log new events.
+        This session is locked. You don't have permission to log events.
       </div>
     );
   }

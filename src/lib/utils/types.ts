@@ -32,6 +32,7 @@ export interface Session {
   title: string | null;
   status: SessionStatus;
   owner_id: string | null;
+  edit_mode: EditMode;
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +87,18 @@ export interface MatchPlayerEventAggregates {
   event_type: EventType;
   role: "actor" | "receiver";
   count: number;
+}
+
+export type EditMode = "owner_only" | "invite_only" | "public_edit";
+
+export interface SessionAccess {
+  id: string;
+  session_id: string;
+  user_id: string;
+  access_level: "view" | "edit";
+  granted_at: string;
+  // joined
+  email?: string;
 }
 
 export interface PlayerDynamics {
