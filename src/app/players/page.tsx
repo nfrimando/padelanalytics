@@ -33,6 +33,15 @@ export default function PlayersPage() {
         </button>
       </div>
 
+      <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-200">
+        <p className="font-semibold">Warning</p>
+        <p>
+          Make sure to avoid creating duplicate player profiles. If a player
+          already exists and a duplicate is created, your analysis would be
+          invalidated and deleted.
+        </p>
+      </div>
+
       {/* Player list */}
       {loading ? (
         <div className="flex items-center gap-2 text-zinc-500">
