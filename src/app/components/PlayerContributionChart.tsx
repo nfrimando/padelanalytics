@@ -9,7 +9,6 @@ import {
   Tooltip,
   ReferenceLine,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { usePlayerContribution } from "@/lib/usePlayerContribution";
 import type { ScoringVersion } from "@/lib/scoring";
@@ -184,6 +183,21 @@ export default function PlayerContributionChart({
         Scoring v{series.scoringVersion} · {series.points.length} events
       </p>
 
+      {/* Custom legend — position-ordered */}
+      <div className="flex flex-wrap gap-3 mb-3">
+        {players.map((player, i) => (
+          <div key={player.player_id} className="flex items-center gap-1.5">
+            <span
+              className="inline-block w-3 h-3 rounded-sm shrink-0"
+              style={{ backgroundColor: PLAYER_COLOURS[i % PLAYER_COLOURS.length] }}
+            />
+            <span className="text-xs text-zinc-600 dark:text-zinc-300">
+              {player.nickname ?? player.player_name ?? `Player ${player.player_id}`}
+            </span>
+          </div>
+        ))}
+      </div>
+
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
@@ -211,15 +225,6 @@ export default function PlayerContributionChart({
 
           <Tooltip content={<PCTooltip players={players} />} />
 
-          <Legend
-            formatter={(value) => {
-              const player = players.find((p) => String(p.player_id) === value);
-              return player?.nickname ?? player?.player_name ?? value;
-            }}
-            wrapperStyle={{ fontSize: 12 }}
-          />
-
-          {/* Zero baseline */}
           <ReferenceLine y={0} stroke="#71717a" strokeWidth={1} />
 
           {/* Set boundary lines */}
