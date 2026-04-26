@@ -39,15 +39,20 @@ export function useSessionAccess(sessionId: string) {
   };
 }
 
-export function useCanEdit(sessionId: string, ownerId: string | null | undefined) {
+export function useCanEdit(sessionId: string, ownerId: string | null | undefined, editMode: string | null | undefined) {
   const { user } = useAuth();
   const isOwner = !!user && user.id === ownerId;
 
   const { data: hasInvite = false } = useQuery({
     queryKey: ["canEdit", sessionId, user?.id],
     queryFn: () => fetchUserEditAccess(sessionId, user!.id),
-    enabled: !!user && !isOwner && !!sessionId,
+    enabled: !!user && !isOwner && !!sessionId && editMode !== "public_edit",
   });
 
-  return { isOwner, hasInvite, canEdit: isOwner || hasInvite };
+  const canEdit =
+    editMode === "public_edit" ||
+    isOwner ||
+    hasInvite;
+
+  return { isOwner, hasInvite, canEdit };
 }

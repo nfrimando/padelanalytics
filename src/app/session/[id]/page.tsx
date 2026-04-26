@@ -45,7 +45,7 @@ export default function SessionPage({
   const { user } = useAuth();
 
   const isOwner = !!user && !!session && session.owner_id === user.id;
-  const { canEdit } = useCanEdit(sessionId, session?.owner_id);
+  const { canEdit } = useCanEdit(sessionId, session?.owner_id, session?.edit_mode);
 
   const { mutate: updateSession } = useUpdateSession(sessionId);
   const [editingTitle, setEditingTitle] = useState(false);
