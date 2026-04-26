@@ -75,7 +75,7 @@ function Stepper({
 const LOG_BUTTONS = [
   { label: "−15s", seconds: 15 },
   { label: "−10s", seconds: 10 },
-  { label: "Now", seconds: 0 },
+  { label: "−5s", seconds: 5 },
 ];
 
 export default function EventLogger({
